@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Moods!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Comic Neue', cursive;
+            background: linear-gradient(135deg, #ffd6d6, #d6e4ff);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .step-item {
+            position: relative;
+            padding: 0.5rem 2rem;
+            transition: all 0.3s ease;
+            font-size: 1.25rem;
+        }
+
+        .step-item.active {
+            background: #4ecdc4;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .step-item:not(:last-child)::after {
+            content: "→";
+            position: absolute;
+            right: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #cbd5e0;
+        }
+
+        .mood-select {
+            background: rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(147, 51, 234, 0.3);
+            border-radius: 10px;
+            padding: 0.5rem;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .selected-moods {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .mood-tag {
+            background: rgba(147, 51, 234, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .remove-mood {
+            cursor: pointer;
+            color: #9333ea;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Steps indicator -->
+        <div class="flex justify-between mb-12 px-4 py-6 glass-card">
+            <div class="step-item rounded-full text-xl">
+                Generate Lyrics
+            </div>
+            <div class="step-item rounded-full text-xl">
+                Choose Music Types
+            </div>
+            <div class="step-item active rounded-full text-xl">
+                Choose Moods
+            </div>
+            <div class="step-item rounded-full text-xl">
+                Listen!
+            </div>
+        </div>
+
+        <div class="glass-card p-8">
+            <h2 class="text-2xl font-bold text-center text-purple-600 mb-6">✨ Choose Up to 3 Moods! ✨</h2>
+            
+            <form id="moodForm" action="{{ url_for('listen') }}" method="POST" class="text-center">
+                <!-- Hidden inputs for previous selections -->
+                <input type="hidden" name="lyrics" value="{{ lyrics }}">
+                {% for genre in genres %}
+                <input type="hidden" name="genres[]" value="{{ genre }}">
+                {% endfor %}
+
+                <div class="relative">
+                    <button 
+                        type="button" 
+                        id="moodDropdown"
+                        onclick="toggleDropdown()"
+                        class="mood-select text-left flex justify-between items-center"
+                    >
+                        <span id="dropdownText">Select moods (up to 3)...</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div id="moodOptions" class="hidden absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-lg bg-white shadow-lg">
+                        <div class="p-2 space-y-1">
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Relaxed" onchange="handleMoodChange(this)" class="mr-2">
+                                Relaxed
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Happy" onchange="handleMoodChange(this)" class="mr-2">
+                                Happy
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Energetic" onchange="handleMoodChange(this)" class="mr-2">
+                                Energetic
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Calm" onchange="handleMoodChange(this)" class="mr-2">
+                                Calm
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Inspired" onchange="handleMoodChange(this)" class="mr-2">
+                                Inspired
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Mysterious" onchange="handleMoodChange(this)" class="mr-2">
+                                Mysterious
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Majestic" onchange="handleMoodChange(this)" class="mr-2">
+                                Majestic
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Quirky" onchange="handleMoodChange(this)" class="mr-2">
+                                Quirky
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Warm" onchange="handleMoodChange(this)" class="mr-2">
+                                Warm
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Joyful" onchange="handleMoodChange(this)" class="mr-2">
+                                Joyful
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Emotional" onchange="handleMoodChange(this)" class="mr-2">
+                                Emotional
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Dreamy" onchange="handleMoodChange(this)" class="mr-2">
+                                Dreamy
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Melancholic" onchange="handleMoodChange(this)" class="mr-2">
+                                Melancholic
+                            </label>
+                            <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                <input type="checkbox" value="Chill" onchange="handleMoodChange(this)" class="mr-2">
+                                Chill
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="selectedMoods" class="selected-moods">
+                    <!-- Selected moods will appear here -->
+                </div>
+
+                <div class="mt-8 text-center">
+                    <button 
+                        type="submit" 
+                        id="submitMoods"
+                        disabled
+                        class="bg-gradient-to-r from-purple-400 to-pink-400 text-white px-8 py-3 rounded-full text-xl 
+                               hover:from-purple-500 hover:to-pink-500 transform hover:scale-105 
+                               transition duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Generate Your Song! 🎵
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let selectedMoods = [];
+        const maxMoods = 3;
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('moodOptions');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('moodOptions');
+            const dropdownButton = document.getElementById('moodDropdown');
+            if (!dropdown.contains(event.target) && !dropdownButton.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        function handleMoodChange(checkbox) {
+            if (checkbox.checked && selectedMoods.length >= maxMoods) {
+                checkbox.checked = false;
+                alert('You can only select up to 3 moods!');
+                return;
+            }
+
+            if (checkbox.checked) {
+                selectedMoods.push(checkbox.value);
+            } else {
+                selectedMoods = selectedMoods.filter(m => m !== checkbox.value);
+            }
+
+            updateMoodDisplay();
+            updateDropdownText();
+        }
+
+        function updateDropdownText() {
+            const text = selectedMoods.length > 0 
+                ? selectedMoods.join(', ') 
+                : 'Select moods (up to 3)...';
+            document.getElementById('dropdownText').textContent = text;
+        }
+
+        function removeMood(mood) {
+            selectedMoods = selectedMoods.filter(m => m !== mood);
+            // Uncheck the corresponding checkbox
+            const checkbox = document.querySelector(`input[value="${mood}"]`);
+            if (checkbox) checkbox.checked = false;
+            updateMoodDisplay();
+            updateDropdownText();
+            document.getElementById('submitMoods').disabled = selectedMoods.length === 0;
+        }
+
+        function updateMoodDisplay() {
+            const container = document.getElementById('selectedMoods');
+            container.innerHTML = '';
+            
+            selectedMoods.forEach(mood => {
+                const tag = document.createElement('div');
+                tag.className = 'mood-tag';
+                tag.innerHTML = `
+                    ${mood}
+                    <span class="remove-mood" onclick="removeMood('${mood}')">&times;</span>
+                    <input type="hidden" name="moods[]" value="${mood}">
+                `;
+                container.appendChild(tag);
+            });
+
+            document.getElementById('submitMoods').disabled = selectedMoods.length === 0;
+        }
+    </script>
+</body>
+</html> 

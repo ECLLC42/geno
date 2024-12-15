@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Music Style!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Comic Neue', cursive;
+            background: linear-gradient(135deg, #ffd6d6, #d6e4ff);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .step-item {
+            position: relative;
+            padding: 0.5rem 2rem;
+            transition: all 0.3s ease;
+            font-size: 1.25rem;
+        }
+
+        .step-item.active {
+            background: #4ecdc4;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .step-item:not(:last-child)::after {
+            content: "→";
+            position: absolute;
+            right: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #cbd5e0;
+        }
+
+        .genre-select {
+            background: rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(147, 51, 234, 0.3);
+            border-radius: 10px;
+            padding: 0.5rem;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .genre-select option {
+            padding: 8px;
+            margin: 4px;
+            border-radius: 4px;
+        }
+
+        .selected-genres {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .genre-tag {
+            background: rgba(147, 51, 234, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .remove-genre {
+            cursor: pointer;
+            color: #9333ea;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Steps indicator -->
+        <div class="flex justify-between mb-12 px-4 py-6 glass-card">
+            <div class="step-item rounded-full text-xl">
+                Generate Lyrics
+            </div>
+            <div class="step-item active rounded-full text-xl">
+                Choose Music Types
+            </div>
+            <div class="step-item rounded-full text-xl">
+                Choose Moods
+            </div>
+            <div class="step-item rounded-full text-xl">
+                Listen!
+            </div>
+        </div>
+
+        <!-- Lyrics Display -->
+        <div class="glass-card p-8">
+            <details class="cursor-pointer mb-8">
+                <summary class="text-2xl font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200">
+                    📝 Your Generated Lyrics (Click to view!)
+                </summary>
+                <div class="mt-4 p-4 bg-white bg-opacity-50 rounded-lg whitespace-pre-line">
+                    {{ lyrics }}
+                </div>
+            </details>
+
+            <!-- Genre Selection -->
+            <div class="mt-8 text-center">
+                <h2 class="text-2xl font-bold text-purple-600 mb-6">✨ Choose Up to 3 Genres! ✨</h2>
+                <form id="genreForm" action="{{ url_for('select_moods') }}" method="POST">
+                    <input type="hidden" name="lyrics" value="{{ lyrics }}">
+                    <div class="relative">
+                        <button 
+                            type="button" 
+                            id="genreDropdown"
+                            onclick="toggleDropdown()"
+                            class="genre-select text-left flex justify-between items-center"
+                        >
+                            <span id="dropdownText">Select genres (up to 3)...</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div id="genreOptions" class="hidden absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-lg bg-white shadow-lg">
+                            <div class="p-2 space-y-1">
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Children" onchange="handleGenreChange(this)" class="mr-2">
+                                    Children
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Pop" onchange="handleGenreChange(this)" class="mr-2">
+                                    Pop
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="R&B" onchange="handleGenreChange(this)" class="mr-2">
+                                    R&B
+                                </label>
+                                <!-- Add all other genres following the same pattern -->
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Rock" onchange="handleGenreChange(this)" class="mr-2">
+                                    Rock
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Folk" onchange="handleGenreChange(this)" class="mr-2">
+                                    Folk
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Funk" onchange="handleGenreChange(this)" class="mr-2">
+                                    Funk
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="World Music" onchange="handleGenreChange(this)" class="mr-2">
+                                    World Music
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Hip Hop" onchange="handleGenreChange(this)" class="mr-2">
+                                    Hip Hop
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Jazz" onchange="handleGenreChange(this)" class="mr-2">
+                                    Jazz
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Latin" onchange="handleGenreChange(this)" class="mr-2">
+                                    Latin
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Metal" onchange="handleGenreChange(this)" class="mr-2">
+                                    Metal
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Reggae" onchange="handleGenreChange(this)" class="mr-2">
+                                    Reggae
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Soul" onchange="handleGenreChange(this)" class="mr-2">
+                                    Soul
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Indian" onchange="handleGenreChange(this)" class="mr-2">
+                                    Indian
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Afrobeat" onchange="handleGenreChange(this)" class="mr-2">
+                                    Afrobeat
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Indie" onchange="handleGenreChange(this)" class="mr-2">
+                                    Indie
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Classical" onchange="handleGenreChange(this)" class="mr-2">
+                                    Classical
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Dance" onchange="handleGenreChange(this)" class="mr-2">
+                                    Dance
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Alternative Rock" onchange="handleGenreChange(this)" class="mr-2">
+                                    Alternative Rock
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="K-Pop" onchange="handleGenreChange(this)" class="mr-2">
+                                    K-Pop
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Ballad" onchange="handleGenreChange(this)" class="mr-2">
+                                    Ballad
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="selectedGenres" class="selected-genres">
+                        <!-- Selected genres will appear here -->
+                    </div>
+
+                    <div class="mt-8">
+                        <button 
+                            type="submit" 
+                            id="submitGenres"
+                            disabled
+                            class="bg-gradient-to-r from-purple-400 to-pink-400 text-white px-8 py-3 rounded-full text-xl 
+                                   hover:from-purple-500 hover:to-pink-500 transform hover:scale-105 
+                                   transition duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Next Step: Choose Moods! 🎵
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedGenres = [];
+        const maxGenres = 3;
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('genreOptions');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('genreOptions');
+            const dropdownButton = document.getElementById('genreDropdown');
+            if (!dropdown.contains(event.target) && !dropdownButton.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        function handleGenreChange(checkbox) {
+            if (checkbox.checked && selectedGenres.length >= maxGenres) {
+                checkbox.checked = false;
+                alert('You can only select up to 3 genres!');
+                return;
+            }
+
+            if (checkbox.checked) {
+                selectedGenres.push(checkbox.value);
+            } else {
+                selectedGenres = selectedGenres.filter(g => g !== checkbox.value);
+            }
+
+            updateGenreDisplay();
+            updateDropdownText();
+        }
+
+        function updateDropdownText() {
+            const text = selectedGenres.length > 0 
+                ? selectedGenres.join(', ') 
+                : 'Select genres (up to 3)...';
+            document.getElementById('dropdownText').textContent = text;
+        }
+
+        function removeGenre(genre) {
+            selectedGenres = selectedGenres.filter(g => g !== genre);
+            // Uncheck the corresponding checkbox
+            const checkbox = document.querySelector(`input[value="${genre}"]`);
+            if (checkbox) checkbox.checked = false;
+            updateGenreDisplay();
+            updateDropdownText();
+            document.getElementById('submitGenres').disabled = selectedGenres.length === 0;
+        }
+
+        function updateGenreDisplay() {
+            const container = document.getElementById('selectedGenres');
+            container.innerHTML = '';
+            
+            selectedGenres.forEach(genre => {
+                const tag = document.createElement('div');
+                tag.className = 'genre-tag';
+                tag.innerHTML = `
+                    ${genre}
+                    <span class="remove-genre" onclick="removeGenre('${genre}')">&times;</span>
+                    <input type="hidden" name="genres[]" value="${genre}">
+                `;
+                container.appendChild(tag);
+            });
+
+            document.getElementById('submitGenres').disabled = selectedGenres.length === 0;
+        }
+    </script>
+</body>
+</html> 

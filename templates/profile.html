@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto py-10">
+        <h1 class="text-3xl font-bold mb-5">User Profile</h1>
+        <div class="bg-white shadow-md rounded p-6">
+            <h2 class="text-2xl font-semibold mb-3">Account Details</h2>
+            <p><strong>Stage Name:</strong> {{ data.user.stage_name }}</p>
+            <p><strong>VIP Level:</strong> {{ data.user.vip_level_name }}</p>
+            <p><strong>VIP Plan:</strong> {{ data.user.vip_name }} ({{ data.user.vip_period_name }})</p>
+            <p><strong>Remaining Credits:</strong> {{ data.credits }}</p>
+            <p><strong>Feed List Count:</strong> {{ data.feed_list_count }}</p>
+            {% if data.user.profile_image %}
+            <p><strong>Profile Image:</strong></p>
+            <img src="{{ data.user.profile_image }}" alt="Profile Image" class="rounded w-32 h-32">
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

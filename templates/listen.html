@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listen to Your Song!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Comic Neue', cursive;
+            background: linear-gradient(135deg, #ffd6d6, #d6e4ff);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        .step-item {
+            position: relative;
+            padding: 0.5rem 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .step-item.active {
+            background: #4ecdc4;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .step-item:not(:last-child)::after {
+            content: "→";
+            position: absolute;
+            right: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #cbd5e0;
+        }
+
+        .summary-section {
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            background: rgba(147, 51, 234, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Steps indicator -->
+        <div class="flex justify-between mb-12 px-4 py-6 glass-card">
+            <div class="step-item rounded-full">
+                Generate Lyrics
+            </div>
+            <div class="step-item rounded-full">
+                Choose Music Types
+            </div>
+            <div class="step-item rounded-full">
+                Choose Moods
+            </div>
+            <div class="step-item active rounded-full">
+                Listen!
+            </div>
+        </div>
+
+        <div class="glass-card p-8">
+            <h1 class="text-3xl font-bold text-center text-purple-600 mb-8">
+                🎵 Your Song is Ready! 🎵
+            </h1>
+
+            <!-- Song Summary -->
+            <div class="space-y-6 mb-8">
+                <!-- Lyrics Dropdown -->
+                <div class="glass-card">
+                    <details class="cursor-pointer">
+                        <summary class="p-4 text-xl font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
+                            <span>📝 Your Lyrics</span>
+                            <svg class="w-4 h-4 ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </summary>
+                        <div class="p-4 bg-white bg-opacity-50 rounded-b-lg whitespace-pre-line border-t border-purple-100">
+                            {{ lyrics }}
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Genres Dropdown -->
+                <div class="glass-card">
+                    <details class="cursor-pointer">
+                        <summary class="p-4 text-xl font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
+                            <span>🎸 Selected Genres</span>
+                            <svg class="w-4 h-4 ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </summary>
+                        <div class="p-4 bg-white bg-opacity-50 rounded-b-lg border-t border-purple-100">
+                            {% for genre in genres %}
+                                <span class="tag">{{ genre }}</span>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Moods Dropdown -->
+                <div class="glass-card">
+                    <details class="cursor-pointer">
+                        <summary class="p-4 text-xl font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
+                            <span>🎭 Selected Moods</span>
+                            <svg class="w-4 h-4 ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </summary>
+                        <div class="p-4 bg-white bg-opacity-50 rounded-b-lg border-t border-purple-100">
+                            {% for mood in moods %}
+                                <span class="tag">{{ mood }}</span>
+                            {% endfor %}
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Song Player Placeholder -->
+            <div class="glass-card p-8 text-center">
+                <h2 class="text-2xl font-bold text-purple-600 mb-4">
+                    🎧 Your Song
+                </h2>
+                <div class="bg-white bg-opacity-50 rounded-lg p-8">
+                    <p class="text-gray-600">
+                        Song player coming soon...
+                    </p>
+                    <!-- Placeholder for audio player -->
+                    <div class="mt-4">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-purple-100 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
