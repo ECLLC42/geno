@@ -281,19 +281,15 @@
             barGap: 1,
             height: 40,
             barRadius: 3,
-            backend: 'WebAudio',
             normalize: true,
             responsive: true,
             fillParent: true,
             autoScroll: false,
             hideScrollbar: true,
             interact: true,
-            dragToSeek: true,
-            minPxPerSec: 100,
-            maxCanvasWidth: 4000,
-            pixelRatio: 1,
-            waveStumps: false,
-            renderFunction: 'SyncProcessor'
+            minPxPerSec: 50,
+            pixelRatio: window.devicePixelRatio,
+            backend: 'MediaElement',
         });
 
         // Add click handler for seeking
@@ -313,32 +309,45 @@
                 return;
             }
 
-            const fadeOutStart = duration - 2.5;
+            // Start fade out 3 seconds before the end
+            const fadeOutDuration = 3;
+            const fadeOutStart = duration - fadeOutDuration;
             
             if (currentTime >= fadeOutStart) {
                 try {
-                    const volume = Math.max(0, Math.min(1, (duration - currentTime) / 2.5));
+                    // Calculate fade volume (1 to 0 over fadeOutDuration seconds)
+                    const timeLeft = duration - currentTime;
+                    const volume = Math.max(0, timeLeft / fadeOutDuration);
+                    
                     console.log('Fade out:', { 
-                        currentTime, 
-                        duration, 
-                        timeLeft: duration - currentTime,
-                        volume 
-                    });  // Debug log
+                        currentTime: currentTime.toFixed(2), 
+                        timeLeft: timeLeft.toFixed(2),
+                        volume: volume.toFixed(2) 
+                    });
+                    
                     if (Number.isFinite(volume)) {
                         wavesurfer.setVolume(volume);
                     }
                 } catch (err) {
-                    console.error('Error setting volume:', err);
+                    console.error('Error during fade out:', err);
                 }
             } else {
-                try {
-                    wavesurfer.setVolume(1);
-                } catch (err) {
-                    console.error('Error resetting volume:', err);
-                }
+                // Ensure full volume before fade out begins
+                wavesurfer.setVolume(1);
             }
             
             updateTime(currentTime, duration);
+        });
+
+        // Also add this to ensure volume resets when seeking
+        wavesurfer.on('seek', function(position) {
+            const currentTime = position * wavesurfer.getDuration();
+            const duration = wavesurfer.getDuration();
+            const fadeOutStart = duration - 3;
+            
+            if (currentTime < fadeOutStart) {
+                wavesurfer.setVolume(1);
+            }
         });
 
         // Ensure volume is reset when song ends
