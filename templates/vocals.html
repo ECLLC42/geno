@@ -7,14 +7,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
     <style>
+        html {
+            height: -webkit-fill-available;
+        }
+        
         body {
             font-family: 'Comic Neue', cursive;
             background: linear-gradient(135deg, #ffd6d6, #d6e4ff);
             min-height: 100vh;
+            min-height: -webkit-fill-available;
         }
         
         .glass-card {
             background: rgba(255, 255, 255, 0.25);
+            -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
             border-radius: 20px;
             border: 2px solid rgba(255, 255, 255, 0.18);
@@ -26,6 +32,7 @@
             padding: 0.5rem 2rem;
             transition: all 0.3s ease;
             font-size: 1.25rem;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .step-item.active {
@@ -51,6 +58,7 @@
             margin: 1rem;
             cursor: pointer;
             transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .vocal-option:hover {
@@ -61,6 +69,13 @@
         .vocal-option.selected {
             background: rgba(147, 51, 234, 0.1);
             border-color: #9333ea;
+        }
+
+        .flex {
+            display: -webkit-flex;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
         }
     </style>
 </head>

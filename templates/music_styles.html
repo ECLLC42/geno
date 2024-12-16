@@ -7,14 +7,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
     <style>
+        html {
+            height: -webkit-fill-available;
+        }
+        
         body {
             font-family: 'Comic Neue', cursive;
             background: linear-gradient(135deg, #ffd6d6, #d6e4ff);
             min-height: 100vh;
+            min-height: -webkit-fill-available;
         }
         
         .glass-card {
             background: rgba(255, 255, 255, 0.25);
+            -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
             border-radius: 20px;
             border: 2px solid rgba(255, 255, 255, 0.18);
@@ -26,6 +32,7 @@
             padding: 0.5rem 2rem;
             transition: all 0.3s ease;
             font-size: 1.25rem;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .step-item.active {
@@ -51,6 +58,8 @@
             width: 100%;
             max-width: 400px;
             margin: 0 auto;
+            -webkit-appearance: none;
+            appearance: none;
         }
 
         .genre-select option {
@@ -60,6 +69,7 @@
         }
 
         .selected-genres {
+            display: -webkit-flex;
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
@@ -68,12 +78,13 @@
         }
 
         .genre-tag {
-            background: rgba(147, 51, 234, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
+            display: -webkit-flex;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            background: rgba(147, 51, 234, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
         }
 
         .remove-genre {

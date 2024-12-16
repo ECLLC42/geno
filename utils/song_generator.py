@@ -50,7 +50,7 @@ def generate_song(lyrics, genres, moods, vocals, instruments):
             raise SongGenerationError("Vocal type is required")
             
         # Combine genres, moods, instruments, vocals, and fade for the desc parameter
-        desc_elements = genres + moods + instruments + [vocals + ", end"]
+        desc_elements = genres + moods + instruments + [vocals + ", fade out"]
         desc = ", ".join(desc_elements)
         
         # Log the description parameter
