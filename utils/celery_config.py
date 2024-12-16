@@ -11,7 +11,7 @@ def make_celery(app=None):
         'tasks',
         broker=REDIS_URL,
         backend=REDIS_URL,
-        include=['utils.song_generator']
+        include=['tasks.song_tasks']
     )
     
     celery.conf.update(

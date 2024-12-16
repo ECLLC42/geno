@@ -69,29 +69,29 @@ def generate_song(lyrics, genres, moods, vocals, instruments):
             if not data.get('songs'):
                 raise SongGenerationError("No songs were generated")
             
-            # Only get version 2
-            version_2 = next((song for song in data['songs'] if song['version'] == 2), None)
-            if not version_2:
-                raise SongGenerationError("Version 2 was not generated")
+            # Get the last song (most refined version)
+            song = data['songs'][-1]
+            if not song:
+                raise SongGenerationError("No valid song was generated")
             
             # Initialize S3 handler
             s3_handler = S3Handler()
             
             try:
                 urls = s3_handler.download_and_upload_to_s3(
-                    version_2['mp3_url'],
-                    version_2['song_id']
+                    song['mp3_url'],
+                    song['song_id']
                 )
                 # Update both URLs
-                version_2['mp3_url'] = urls['play_url']
-                version_2['download_url'] = urls['download_url']
+                song['mp3_url'] = urls['play_url']
+                song['download_url'] = urls['download_url']
             except Exception as e:
                 logger.error(f"S3 operation failed: {str(e)}")
                 # Keep original URL for both
-                version_2['download_url'] = version_2['mp3_url']
+                song['download_url'] = song['mp3_url']
             
-            # Return only version 2
-            return {'songs': [version_2]}
+            # Return the song
+            return {'songs': [song]}
             
         elif response.status_code == 401:
             raise SongGenerationError("Authentication failed. Please check your API token.")

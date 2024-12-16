@@ -281,12 +281,24 @@
             barGap: 1,
             height: 40,
             barRadius: 3,
-            backend: 'MediaElement',
+            backend: 'WebAudio',
             normalize: true,
             responsive: true,
             fillParent: true,
-            scrollParent: false,
-            minPxPerSec: 50
+            autoScroll: false,
+            hideScrollbar: true,
+            interact: true,
+            dragToSeek: true,
+            minPxPerSec: 100,
+            maxCanvasWidth: 4000,
+            pixelRatio: 1,
+            waveStumps: false,
+            renderFunction: 'SyncProcessor'
+        });
+
+        // Add click handler for seeking
+        wavesurfer.on('interaction', (position) => {
+            wavesurfer.seekTo(position);
         });
 
         // Store wavesurfer instance
@@ -301,11 +313,17 @@
                 return;
             }
 
-            const fadeOutStart = duration - 2;
+            const fadeOutStart = duration - 2.5;
             
             if (currentTime >= fadeOutStart) {
                 try {
-                    const volume = Math.max(0, Math.min(1, (duration - currentTime) / 2));
+                    const volume = Math.max(0, Math.min(1, (duration - currentTime) / 2.5));
+                    console.log('Fade out:', { 
+                        currentTime, 
+                        duration, 
+                        timeLeft: duration - currentTime,
+                        volume 
+                    });  // Debug log
                     if (Number.isFinite(volume)) {
                         wavesurfer.setVolume(volume);
                     }
@@ -425,7 +443,13 @@
                 Choose Music Types
             </div>
             <div class="step-item rounded-full">
+                Choose Instruments
+            </div>
+            <div class="step-item rounded-full">
                 Choose Moods
+            </div>
+            <div class="step-item rounded-full">
+                Choose Voice
             </div>
             <div class="step-item active rounded-full">
                 Listen!
