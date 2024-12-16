@@ -77,7 +77,7 @@
             <div class="step-item rounded-full">
                 Choose Moods
             </div>
-            <div class="step-item active rounded-full">
+            <div class="step-item rounded-full">
                 Choose Voice
             </div>
             <div class="step-item rounded-full">
@@ -96,6 +96,9 @@
                 {% endfor %}
                 {% for mood in moods %}
                     <input type="hidden" name="moods[]" value="{{ mood }}">
+                {% endfor %}
+                {% for instrument in instruments %}
+                    <input type="hidden" name="instruments[]" value="{{ instrument }}">
                 {% endfor %}
 
                 <div class="flex justify-center gap-8 mb-8">

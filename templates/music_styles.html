@@ -96,6 +96,12 @@
                 Choose Moods
             </div>
             <div class="step-item rounded-full text-xl">
+                Choose Instruments
+            </div>
+            <div class="step-item rounded-full text-xl">
+                Choose Voice
+            </div>
+            <div class="step-item rounded-full text-xl">
                 Listen!
             </div>
         </div>
@@ -114,7 +120,7 @@
             <!-- Genre Selection -->
             <div class="mt-8 text-center">
                 <h2 class="text-2xl font-bold text-purple-600 mb-6">✨ Choose Up to 3 Genres! ✨</h2>
-                <form id="genreForm" action="{{ url_for('select_moods') }}" method="POST">
+                <form id="genreForm" action="{{ url_for('select_instruments') }}" method="POST">
                     <input type="hidden" name="lyrics" value="{{ lyrics }}">
                     <div class="relative">
                         <button 
@@ -134,6 +140,10 @@
                                 <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
                                     <input type="checkbox" value="Children" onchange="handleGenreChange(this)" class="mr-2">
                                     Children
+                                </label>
+                                <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
+                                    <input type="checkbox" value="Gregorian Chant" onchange="handleGenreChange(this)" class="mr-2">
+                                    Gregorian Chant
                                 </label>
                                 <label class="flex items-center p-2 hover:bg-purple-50 rounded cursor-pointer">
                                     <input type="checkbox" value="Pop" onchange="handleGenreChange(this)" class="mr-2">
@@ -233,7 +243,7 @@
                                    hover:from-purple-500 hover:to-pink-500 transform hover:scale-105 
                                    transition duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Next Step: Choose Moods! 🎵
+                            Next Step: Choose Instruments! 🎵
                         </button>
                     </div>
                 </form>

@@ -251,52 +251,87 @@
         }
     </style>
     <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Start song generation immediately when page loads
+        startSongGeneration();
+    });
+
+    function startSongGeneration() {
+        const formData = new FormData();
+        
+        // Get the values from hidden inputs instead of using template syntax
+        formData.append('lyrics', document.querySelector('input[name="lyrics"]').value);
+        formData.append('vocals', document.querySelector('input[name="vocals"]').value);
+        
+        // Get all genre inputs
+        document.querySelectorAll('input[name="genres[]"]').forEach(input => {
+            formData.append('genres[]', input.value);
+        });
+        
+        // Get all mood inputs
+        document.querySelectorAll('input[name="moods[]"]').forEach(input => {
+            formData.append('moods[]', input.value);
+        });
+        
+        // Get all instrument inputs
+        document.querySelectorAll('input[name="instruments[]"]').forEach(input => {
+            formData.append('instruments[]', input.value);
+        });
+        
+        // Call generate_song endpoint
+        fetch('/generate_song', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.task_id) {
+                pollTaskStatus(data.task_id);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('Failed to start song generation');
+        });
+    }
+
     function pollTaskStatus(taskId) {
-        const statusElement = document.getElementById('taskStatus');
-        const playerElement = document.getElementById('songPlayer');
-        const errorElement = document.getElementById('errorMessage');
-
-        function checkStatus() {
-            fetch(`/task_status/${taskId}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Task status:', data);  // Debug log
+        fetch(`/task_status/${taskId}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Task status:', data);
+                console.log('Task state:', data.state);
+                
+                if (data.state === 'PENDING' || data.state === 'PROGRESS') {
+                    document.getElementById('songPlayer').classList.add('hidden');
+                    document.getElementById('taskStatus').classList.remove('hidden');
+                    setTimeout(() => pollTaskStatus(taskId), 2000);
+                }
+                else if (data.state === 'SUCCESS') {
+                    console.log('Task succeeded, song data:', data);
+                    document.getElementById('taskStatus').classList.add('hidden');
+                    document.getElementById('errorMessage').classList.add('hidden');
                     
-                    if (data.state === 'PENDING' || data.state === 'PROGRESS') {
-                        statusElement.innerHTML = `
-                            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-pink-400 border-solid mx-auto mb-4"></div>
-                            <p class="text-3xl font-bold text-purple-600">${data.status}</p>
-                            <p class="text-xl text-purple-600 mt-2">Please wait for up to 2 minutes...</p>
-                        `;
-                        setTimeout(checkStatus, 2000);
+                    const songPlayer = document.getElementById('songPlayer');
+                    songPlayer.classList.remove('hidden');
+                    
+                    if (data.song_data && data.song_data.songs) {
+                        showPlayer(data.song_data);
+                    } else {
+                        console.error('No song data in response:', data);
+                        showError('No song data received');
                     }
-                    else if (data.state === 'SUCCESS' && data.song_data && data.song_data.songs) {
-                        console.log('Success! Songs:', data.song_data.songs);
-                        statusElement.classList.add('hidden');
-                        playerElement.classList.remove('hidden');
-                        
-                        playerElement.innerHTML = '';
-                        data.song_data.songs.forEach(song => {
-                            createWaveformPlayer(playerElement, song);
-                        });
-                    }
-                    else if (data.state === 'FAILURE' || data.state === 'ERROR') {
-                        statusElement.classList.add('hidden');
-                        errorElement.classList.remove('hidden');
-                        errorElement.innerHTML = `
-                            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                                <strong class="font-bold">Error: </strong>
-                                <span class="block sm:inline">${data.status}</span>
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error polling task status:', error);
-                });
-        }
-
-        checkStatus();
+                }
+                else if (data.state === 'FAILURE' || data.state === 'ERROR') {
+                    document.getElementById('taskStatus').classList.add('hidden');
+                    document.getElementById('songPlayer').classList.add('hidden');
+                    showError(data.status || 'Task failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error polling task status:', error);
+                showError('Error checking task status');
+            });
     }
 
     // Cleanup function for wavesurfer instances
@@ -357,15 +392,7 @@
             responsive: true,
             fillParent: true,
             minPxPerSec: 1,
-            // Add high quality settings
-            sampleRate: 44100,  // CD quality sample rate
-            audioRate: 1,       // Normal playback speed
-            splitChannels: false, // Stereo output
-            mediaControls: false,
-            audioContext: new (window.AudioContext || window.webkitAudioContext)({
-                sampleRate: 44100,
-                latencyHint: 'playback'
-            })
+            mediaControls: false
         });
 
         // Store wavesurfer instance
@@ -375,21 +402,39 @@
         wavesurfer.on('audioprocess', () => {
             const currentTime = wavesurfer.getCurrentTime();
             const duration = wavesurfer.getDuration();
-            const fadeOutStart = duration - 4; // Start fade 4 seconds before end (2s fade + 2s silence)
-            const silenceStart = duration - 2; // Start silence 2 seconds before end
             
-            if (currentTime >= silenceStart) {
-                // Complete silence for last 2 seconds
-                wavesurfer.setVolume(0);
-            } else if (currentTime >= fadeOutStart) {
-                // Fade out over 2 seconds
-                const volume = Math.max(0, (silenceStart - currentTime) / 2);
-                wavesurfer.setVolume(volume);
+            // Only process if we have valid times and wavesurfer is ready
+            if (!currentTime || !duration || !wavesurfer.isReady) {
+                return;
+            }
+
+            const fadeOutStart = duration - 2; // 2 second fade out
+            
+            if (currentTime >= fadeOutStart) {
+                try {
+                    // Ensure volume is between 0 and 1
+                    const volume = Math.max(0, Math.min(1, (duration - currentTime) / 2));
+                    if (Number.isFinite(volume)) {
+                        wavesurfer.setVolume(volume);
+                    }
+                } catch (err) {
+                    console.error('Error setting volume:', err);
+                }
             } else {
-                wavesurfer.setVolume(1);
+                try {
+                    wavesurfer.setVolume(1);
+                } catch (err) {
+                    console.error('Error resetting volume:', err);
+                }
             }
             
             updateTime(song.version, currentTime, duration);
+        });
+
+        // Ensure volume is reset when song ends
+        wavesurfer.on('finish', () => {
+            console.log('Song finished - resetting volume');
+            wavesurfer.setVolume(1);
         });
 
         // Add ready event listener
@@ -401,6 +446,11 @@
         // Add error handler
         wavesurfer.on('error', err => {
             console.error('WaveSurfer error:', err);
+            // Show the native audio player if WaveSurfer fails
+            const audio = document.createElement('audio');
+            audio.src = song.play_url || song.mp3_url;
+            audio.style.display = 'block';
+            container.appendChild(audio);
         });
 
         // Load audio
@@ -422,17 +472,18 @@
             return;
         }
         
-        const playIcon = document.getElementById(`playIcon-${version}`);
-        const pauseIcon = document.getElementById(`pauseIcon-${version}`);
-        
-        if (wavesurfer.isPlaying()) {
-            wavesurfer.pause();
-            playIcon.classList.remove('hidden');
-            pauseIcon.classList.add('hidden');
-        } else {
-            wavesurfer.play();
-            playIcon.classList.add('hidden');
-            pauseIcon.classList.remove('hidden');
+        try {
+            if (wavesurfer.isPlaying()) {
+                wavesurfer.pause();
+                document.getElementById(`playIcon-${version}`).classList.remove('hidden');
+                document.getElementById(`pauseIcon-${version}`).classList.add('hidden');
+            } else {
+                wavesurfer.play();
+                document.getElementById(`playIcon-${version}`).classList.add('hidden');
+                document.getElementById(`pauseIcon-${version}`).classList.remove('hidden');
+            }
+        } catch (err) {
+            console.error('Error toggling play state:', err);
         }
     }
 
@@ -452,13 +503,29 @@
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    // Start polling when page loads if we have a task ID
-    document.addEventListener('DOMContentLoaded', function() {
-        const taskId = '{{ task_id }}';
-        if (taskId) {
-            pollTaskStatus(taskId);
+    function showPlayer(songData) {
+        console.log('showPlayer called with:', songData);
+        const songPlayer = document.getElementById('songPlayer');
+        songPlayer.innerHTML = '';
+        if (songData.songs) {
+            songData.songs.forEach(song => {
+                console.log('Creating player for song:', song);
+                createWaveformPlayer(songPlayer, song);
+            });
         }
-    });
+    }
+
+    function showError(message) {
+        const errorMessage = document.getElementById('errorMessage');
+        errorMessage.innerHTML = `
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                <strong class="font-bold">Error: </strong>
+                <span class="block sm:inline">${message}</span>
+            </div>
+        `;
+        errorMessage.classList.remove('hidden');
+        setTimeout(() => errorMessage.classList.add('hidden'), 5000);
+    }
     </script>
 </head>
 <body class="p-8">
@@ -480,77 +547,101 @@
         </div>
 
         <div class="glass-card p-8">
-            <h1 class="text-3xl font-bold text-center mb-8">
-                <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
-                    🎵 Your AI-Generated Songs Are Ready! 🎵
-                </span>
-            </h1>
+            <!-- Add a form wrapper -->
+            <div id="songContainer">
+                <!-- Hidden inputs for form data -->
+                <input type="hidden" name="lyrics" id="lyrics" value="{{ lyrics }}">
+                {% for genre in genres %}
+                    <input type="hidden" name="genres[]" value="{{ genre }}">
+                {% endfor %}
+                {% for mood in moods %}
+                    <input type="hidden" name="moods[]" value="{{ mood }}">
+                {% endfor %}
+                {% for instrument in instruments %}
+                    <input type="hidden" name="instruments[]" value="{{ instrument }}">
+                {% endfor %}
+                <input type="hidden" name="vocals" id="vocals" value="{{ vocals }}">
 
-            <!-- Song Summary -->
-            <div class="space-y-6 mb-8">
-                <!-- Lyrics Dropdown -->
-                <div class="glass-card">
-                    <details class="cursor-pointer">
-                        <summary class="p-4 text-xl font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
-                            <span>📝 Your Lyrics</span>
-                            <svg class="w-4 h-4 ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </summary>
-                        <div class="p-4 bg-white bg-opacity-50 rounded-b-lg whitespace-pre-line border-t border-purple-100">
-                            {{ lyrics }}
-                        </div>
-                    </details>
+                <!-- Rest of the content -->
+                <h1 class="text-3xl font-bold text-center mb-8">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
+                        🎵 Your AI-Generated Songs Are Ready! 🎵
+                    </span>
+                </h1>
+
+                <!-- Song Summary -->
+                <div class="space-y-6 mb-8">
+                    <!-- Lyrics Section -->
+                    <div class="glass-card p-4">
+                        <details class="cursor-pointer">
+                            <summary class="text-xl font-bold text-purple-600">🎵 Lyrics</summary>
+                            <div class="mt-4 bg-white bg-opacity-50 rounded-lg p-4 whitespace-pre-line">
+                                {{ lyrics }}
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Genres Section -->
+                    <div class="glass-card p-4">
+                        <details class="cursor-pointer">
+                            <summary class="text-xl font-bold text-purple-600">🎸 Music Styles</summary>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                {% for genre in genres %}
+                                    <span class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full">{{ genre }}</span>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Instruments Section -->
+                    <div class="glass-card p-4">
+                        <details class="cursor-pointer">
+                            <summary class="text-xl font-bold text-purple-600">🎹 Instruments</summary>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                {% for instrument in instruments %}
+                                    <span class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full">{{ instrument }}</span>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Moods Section -->
+                    <div class="glass-card p-4">
+                        <details class="cursor-pointer">
+                            <summary class="text-xl font-bold text-purple-600">😊 Moods</summary>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                {% for mood in moods %}
+                                    <span class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full">{{ mood }}</span>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Vocals Section -->
+                    <div class="glass-card p-4">
+                        <details class="cursor-pointer">
+                            <summary class="text-xl font-bold text-purple-600">🎤 Voice Type</summary>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <span class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full">{{ vocals }}</span>
+                            </div>
+                        </details>
+                    </div>
                 </div>
 
-                <!-- Genres Dropdown -->
-                <div class="glass-card">
-                    <details class="cursor-pointer">
-                        <summary class="p-4 text-xl font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
-                            <span>🎸 Selected Genres</span>
-                            <svg class="w-4 h-4 ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </summary>
-                        <div class="p-4 bg-white bg-opacity-50 rounded-b-lg border-t border-purple-100">
-                            {% for genre in genres %}
-                                <span class="tag">{{ genre }}</span>
-                            {% endfor %}
-                        </div>
-                    </details>
+                <!-- Song Player -->
+                <div id="taskStatus" class="glass-card p-8 text-center">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-pink-400 border-solid mx-auto mb-4"></div>
+                    <p class="text-3xl font-bold text-purple-600">✨ Making The Magic Happen! ✨</p>
+                    <p class="text-xl text-purple-600 mt-2">This may take up to 2 minutes</p>
                 </div>
 
-                <!-- Moods Dropdown -->
-                <div class="glass-card">
-                    <details class="cursor-pointer">
-                        <summary class="p-4 text-xl font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
-                            <span> Selected Moods</span>
-                            <svg class="w-4 h-4 ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </summary>
-                        <div class="p-4 bg-white bg-opacity-50 rounded-b-lg border-t border-purple-100">
-                            {% for mood in moods %}
-                                <span class="tag">{{ mood }}</span>
-                            {% endfor %}
-                        </div>
-                    </details>
+                <div id="errorMessage" class="glass-card p-8 text-center hidden">
+                    <!-- Error message will be inserted here -->
                 </div>
-            </div>
 
-            <!-- Song Player -->
-            <div id="taskStatus" class="glass-card p-8 text-center">
-                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-pink-400 border-solid mx-auto mb-4"></div>
-                <p class="text-3xl font-bold text-purple-600">✨ Making The Magic Happen! ✨</p>
-                <p class="text-xl text-purple-600 mt-2">This may take up to 2 minutes</p>
-            </div>
-
-            <div id="errorMessage" class="glass-card p-8 text-center hidden">
-                <!-- Error message will be inserted here -->
-            </div>
-
-            <div id="songPlayer" class="glass-card p-8 text-center hidden">
-                <!-- Song player will be inserted here -->
+                <div id="songPlayer" class="glass-card p-8 text-center hidden">
+                    <!-- Song player will be inserted here -->
+                </div>
             </div>
         </div>
     </div>

@@ -90,7 +90,7 @@
                 Choose Moods
             </div>
             <div class="step-item rounded-full text-xl">
-                Listen!
+                Choose Voice! 🎵
             </div>
         </div>
 
@@ -102,6 +102,9 @@
                 <input type="hidden" name="lyrics" value="{{ lyrics }}">
                 {% for genre in genres %}
                 <input type="hidden" name="genres[]" value="{{ genre }}">
+                {% endfor %}
+                {% for instrument in instruments %}
+                <input type="hidden" name="instruments[]" value="{{ instrument }}">
                 {% endfor %}
 
                 <div class="relative">

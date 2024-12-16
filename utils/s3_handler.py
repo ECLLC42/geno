@@ -117,7 +117,9 @@ class S3Handler:
                     'Bucket': self.bucket_name,
                     'Key': key,
                     'ResponseContentType': 'audio/mpeg',
-                    'ResponseContentDisposition': 'inline'
+                    'ResponseContentDisposition': 'inline',
+                    'ResponseCacheControl': 'no-cache',
+                    'ResponseExpires': '0'
                 },
                 ExpiresIn=3600,
                 HttpMethod='GET'
@@ -129,7 +131,9 @@ class S3Handler:
                     'Bucket': self.bucket_name,
                     'Key': key,
                     'ResponseContentType': 'audio/mpeg',
-                    'ResponseContentDisposition': 'attachment'
+                    'ResponseContentDisposition': 'attachment',
+                    'ResponseCacheControl': 'no-cache',
+                    'ResponseExpires': '0'
                 },
                 ExpiresIn=3600,
                 HttpMethod='GET'
@@ -142,56 +146,64 @@ class S3Handler:
         except ClientError as e:
             raise S3URLGenerationError(f"Failed to generate presigned URL: {str(e)}")
 
-    def download_and_upload_to_s3(self, mp3_url, song_id):
+    def download_and_upload_to_s3(self, source_url, song_id):
         """Main method to handle file processing"""
         try:
-            # Validate inputs
-            if not mp3_url or not song_id:
-                raise ValueError("MP3 URL and song ID are required")
-
-            # Extract filename from Mureka URL
-            original_filename = mp3_url.split('/')[-1]  # Get the last part of the URL
-            
-            # Generate a unique filename while preserving original name
-            filename = f"songs/{song_id}/{original_filename}"
-
             # Download the file with proper headers
             headers = {
-                'User-Agent': 'Mozilla/5.0',  # Some CDNs require a user agent
+                'User-Agent': 'Mozilla/5.0',
                 'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8'
             }
             
-            try:
-                response = requests.get(mp3_url, headers=headers, stream=True, timeout=30)
-                response.raise_for_status()
-                file_content = response.content
-            except requests.exceptions.RequestException as e:
-                print(f"Failed to download from Mureka: {str(e)}")
-                # If download fails, return original URL
-                return {
-                    'play_url': mp3_url,
-                    'download_url': mp3_url
-                }
-
+            response = requests.get(source_url, headers=headers, stream=True, timeout=30)
+            response.raise_for_status()
+            
+            # Generate S3 key
+            s3_key = f"songs/{song_id}/{os.path.basename(source_url)}"
+            
             # Upload to S3
-            self.upload_to_s3(file_content, filename, 'audio/mpeg')
-
-            # Generate presigned URL
-            try:
-                urls = self.generate_presigned_url(filename)
-                return urls
-            except Exception as e:
-                print(f"Failed to generate S3 URLs: {str(e)}")
-                return {
-                    'play_url': mp3_url,
-                    'download_url': mp3_url
-                }
-
-        except Exception as e:
-            print(f"S3 operation failed, using original URL: {str(e)}")
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+                Body=response.content,
+                ContentType='audio/mpeg'
+            )
+            
+            # Generate presigned URLs with proper HTTP methods
+            play_url = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': self.bucket_name,
+                    'Key': s3_key,
+                    'ResponseContentType': 'audio/mpeg',
+                    'ResponseContentDisposition': 'inline'
+                },
+                ExpiresIn=3600,  # 1 hour
+                HttpMethod='GET'
+            )
+            
+            download_url = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': self.bucket_name,
+                    'Key': s3_key,
+                    'ResponseContentType': 'audio/mpeg',
+                    'ResponseContentDisposition': 'attachment'
+                },
+                ExpiresIn=3600,  # 1 hour
+                HttpMethod='GET'
+            )
+            
             return {
-                'play_url': mp3_url,
-                'download_url': mp3_url
+                'play_url': play_url,
+                'download_url': download_url
+            }
+            
+        except Exception as e:
+            # If anything fails, return original URL
+            return {
+                'play_url': source_url,
+                'download_url': source_url
             }
 
     def cleanup_old_files(self, prefix="songs/", max_age_days=7):

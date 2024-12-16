@@ -2,10 +2,12 @@ from flask import Flask, request, jsonify, render_template
 import requests
 from dotenv import load_dotenv
 import os
+from utils.song_generator import generate_song
 from utils.lyric_generator import generate_lyrics as generate_lyrics_ai
-from tasks.song_tasks import generate_song_task, SongGenerationError
 from flask_socketio import SocketIO
 import logging
+from tasks.song_tasks import generate_song_task
+from celery import Celery
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -80,25 +82,63 @@ def generate_lyrics_route():
     generated_lyrics = generate_lyrics_ai(user_input)
     return render_template('music_styles.html', lyrics=generated_lyrics)
 
+@app.route('/select_instruments', methods=['POST'])
+def select_instruments():
+    lyrics = request.form.get('lyrics')
+    genres = request.form.getlist('genres[]')
+    return render_template('instruments.html', lyrics=lyrics, genres=genres)
+
 @app.route('/select_moods', methods=['POST'])
 def select_moods():
     lyrics = request.form.get('lyrics')
     genres = request.form.getlist('genres[]')
-    return render_template('moods.html', lyrics=lyrics, genres=genres)
+    instruments = request.form.getlist('instruments[]')
+    return render_template('moods.html', lyrics=lyrics, genres=genres, instruments=instruments)
 
 @app.route('/select_vocals', methods=['POST'])
 def select_vocals():
     lyrics = request.form.get('lyrics')
     genres = request.form.getlist('genres[]')
     moods = request.form.getlist('moods[]')
-    return render_template('vocals.html', lyrics=lyrics, genres=genres, moods=moods)
+    instruments = request.form.getlist('instruments[]')
+    return render_template('vocals.html', lyrics=lyrics, genres=genres, moods=moods, instruments=instruments)
 
-@app.route('/listen', methods=['POST'])
+@app.route('/listen', methods=['GET', 'POST'])
 def listen():
+    try:
+        if request.method == 'POST':
+            lyrics = request.form.get('lyrics')
+            genres = request.form.getlist('genres[]')
+            moods = request.form.getlist('moods[]')
+            instruments = request.form.getlist('instruments[]')
+            vocals = request.form.get('vocals')
+        else:  # GET request
+            lyrics = request.args.get('lyrics')
+            genres = request.args.getlist('genres[]')
+            moods = request.args.getlist('moods[]')
+            instruments = request.args.getlist('instruments[]')
+            vocals = request.args.get('vocals')
+        
+        # Just render the template first, don't generate song yet
+        return render_template('listen.html', 
+                             lyrics=lyrics,
+                             genres=genres,
+                             moods=moods,
+                             vocals=vocals,
+                             instruments=instruments)
+                             
+    except Exception as e:
+        logger.error(f"Error in listen route: {str(e)}", exc_info=True)
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+# Add new route for actual song generation
+@app.route('/generate_song', methods=['POST'])
+def generate_song_route():
     try:
         lyrics = request.form.get('lyrics')
         genres = request.form.getlist('genres[]')
         moods = request.form.getlist('moods[]')
+        instruments = request.form.getlist('instruments[]')
         vocals = request.form.get('vocals')
         
         # Enhanced logging
@@ -106,22 +146,18 @@ def listen():
         logger.info(f"Lyrics (first 50 chars): {lyrics[:50]}...")
         logger.info(f"Selected Genres: {genres}")
         logger.info(f"Selected Moods: {moods}")
+        logger.info(f"Selected Instruments: {instruments}")
         logger.info(f"Selected Vocals: {vocals}")
         
-        # Start the Celery task with vocals parameter
-        task = generate_song_task.delay(lyrics, genres, moods, vocals)
+        # Start the Celery task
+        task = generate_song_task.delay(lyrics, genres, moods, vocals, instruments)
         logger.info(f"Created Celery task with ID: {task.id}")
         
-        return render_template('listen.html', 
-                             lyrics=lyrics,
-                             genres=genres,
-                             moods=moods,
-                             vocals=vocals,
-                             task_id=task.id)
-                             
+        return jsonify({'task_id': task.id})
+        
     except Exception as e:
-        logger.error(f"Error in listen route: {str(e)}", exc_info=True)
-        return jsonify({"error": "An unexpected error occurred"}), 500
+        logger.error(f"Error starting song generation: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/task_status/<task_id>')
 def task_status(task_id):
@@ -140,11 +176,12 @@ def task_status(task_id):
                 'state': task.state,
                 'status': str(task.info.get('error', 'An error occurred'))
             }
-        else:
+        elif task.state == 'SUCCESS':
+            # Return the actual task result instead of task.info
             response = {
                 'state': task.state,
-                'status': task.info.get('status', ''),
-                'song_data': task.info.get('song_data', {})
+                'status': '',
+                'song_data': task.result  # Changed from task.info to task.result
             }
         return jsonify(response)
     except Exception as e:

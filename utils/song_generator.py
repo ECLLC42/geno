@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import json
 from utils.s3_handler import S3Handler, S3Error, S3DownloadError, S3UploadError
 import logging
+import time
 
 load_dotenv()
 
@@ -32,7 +33,7 @@ AUDIO_SETTINGS = {
     'quality': 0  # Highest quality setting for LAME encoder
 }
 
-def generate_song(lyrics, genres, moods, vocals):
+def generate_song(lyrics, genres, moods, vocals, instruments):
     try:
         api_url = "https://api.useapi.net/v1/mureka/music/create-advanced"
         headers = {
@@ -48,8 +49,8 @@ def generate_song(lyrics, genres, moods, vocals):
         if not vocals:
             raise SongGenerationError("Vocal type is required")
             
-        # Combine genres, moods, and vocals for the desc parameter
-        desc_elements = genres + moods + [vocals, "end"]  # Add end to description
+        # Combine genres, moods, instruments, vocals, and fade for the desc parameter
+        desc_elements = genres + moods + instruments + [vocals + ", fade to end"]
         desc = ", ".join(desc_elements)
         
         # Log the description parameter
@@ -58,7 +59,7 @@ def generate_song(lyrics, genres, moods, vocals):
         body = {
             "account": os.getenv('ACCOUNT_ID'),
             "lyrics": lyrics,
-            "desc": desc  # vocals and end are part of the description
+            "desc": desc  # vocals and fade to end are part of the description
         }
         
         response = requests.post(api_url, headers=headers, json=body)
