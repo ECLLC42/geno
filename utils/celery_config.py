@@ -22,6 +22,9 @@ def make_celery(app=None):
         result_serializer='json',
         timezone='UTC',
         enable_utc=True,
+        result_expires=3600,
+        broker_connection_retry_on_startup=True,
+        broker_connection_max_retries=None,
     )
     
     return celery
