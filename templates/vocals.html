@@ -29,10 +29,17 @@
 
         .step-item {
             position: relative;
-            padding: 0.5rem 2rem;
-            transition: all 0.3s ease;
-            font-size: 1.25rem;
+            padding: 0.5rem 1rem;
+            font-size: clamp(0.7rem, 2vw, 0.875rem);
+            white-space: nowrap;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        @media (min-width: 768px) {
+            .step-item {
+                font-size: clamp(0.65rem, 1vw, 0.75rem);
+                padding: clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem);
+            }
         }
 
         .step-item.active {
@@ -42,12 +49,19 @@
         }
 
         .step-item:not(:last-child)::after {
-            content: "→";
-            position: absolute;
-            right: -1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #cbd5e0;
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .step-item:not(:last-child)::after {
+                content: "→";
+                display: block;
+                position: absolute;
+                right: -1rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #cbd5e0;
+            }
         }
 
         .vocal-option {
@@ -82,23 +96,24 @@
 <body class="p-8">
     <div class="max-w-4xl mx-auto">
         <!-- Steps indicator -->
-        <div class="flex justify-between mb-12 px-4 py-6 glass-card">
-            <div class="step-item rounded-full">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-[clamp(0.25rem,1vw,0.5rem)] mb-12 
+             px-[clamp(0.5rem,2vw,1rem)] py-[clamp(0.5rem,1.5vw,1.5rem)] glass-card">
+            <div class="step-item rounded-full text-center">
                 Generate Lyrics
             </div>
-            <div class="step-item rounded-full">
+            <div class="step-item rounded-full text-center">
                 Choose Music Types
             </div>
-            <div class="step-item rounded-full">
+            <div class="step-item rounded-full text-center">
                 Choose Instruments
             </div>
-            <div class="step-item rounded-full">
+            <div class="step-item rounded-full text-center">
                 Choose Moods
             </div>
-            <div class="step-item active rounded-full">
+            <div class="step-item active rounded-full text-center">
                 Choose Voice
             </div>
-            <div class="step-item rounded-full">
+            <div class="step-item rounded-full text-center">
                 Listen!
             </div>
         </div>
