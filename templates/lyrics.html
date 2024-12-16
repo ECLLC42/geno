@@ -7,14 +7,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
     <style>
+        html {
+            height: -webkit-fill-available;
+        }
+        
         body {
             font-family: 'Comic Neue', cursive;
             background: linear-gradient(135deg, #ffd6d6, #d6e4ff);
             min-height: 100vh;
+            min-height: -webkit-fill-available;
         }
         
         .glass-card {
             background: rgba(255, 255, 255, 0.25);
+            -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
             border-radius: 20px;
             border: 2px solid rgba(255, 255, 255, 0.18);
@@ -26,6 +32,7 @@
             padding: 0.5rem 2rem;
             transition: all 0.3s ease;
             font-size: 1.25rem;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .step-item.active {
@@ -54,7 +61,19 @@
             100% { color: #ff0000; }
         }
 
+        @-webkit-keyframes rainbow {
+            0% { color: #ff0000; }
+            14% { color: #ff7f00; }
+            28% { color: #ffff00; }
+            42% { color: #00ff00; }
+            56% { color: #0000ff; }
+            70% { color: #4b0082; }
+            84% { color: #8f00ff; }
+            100% { color: #ff0000; }
+        }
+
         .rainbow-text {
+            -webkit-animation: rainbow 4s linear infinite;
             animation: rainbow 4s linear infinite;
         }
     </style>
