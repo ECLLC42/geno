@@ -6,9 +6,7 @@
     <title>Listen to Your Song!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/peaks.js/2.1.0/peaks.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/konva/8.3.2/konva.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/waveform-data/4.3.0/waveform-data.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
     <style>
         body {
             font-family: 'Comic Neue', cursive;
@@ -283,84 +281,47 @@
         // Append HTML
         container.insertAdjacentHTML('beforeend', playerHtml);
 
-        const audioElement = document.getElementById('audio');
-        
-        // Initialize Peaks
-        const options = {
-            containers: {
-                overview: document.getElementById('waveform')
-            },
-            mediaElement: audioElement,
+        // Initialize WaveSurfer
+        const wavesurfer = WaveSurfer.create({
+            container: '#waveform',
             height: 40,
-            segmentStartMarkerColor: '#9333ea',
-            segmentEndMarkerColor: '#9333ea',
-            zoomview: {
-                waveformColor: '#9333ea50',
-                playedWaveformColor: '#9333ea'
-            },
-            overview: {
-                waveformColor: '#9333ea50',
-                playedWaveformColor: '#9333ea'
-            },
-            webAudio: {
-                audioContext: new (window.AudioContext || window.webkitAudioContext)()
-            }
-        };
-
-        Peaks.init(options, function(err, peaks) {
-            if (err) {
-                console.error('Failed to initialize Peaks:', err);
-                return;
-            }
-
-            window.peaks = peaks;
-            
-            // Update time display when metadata is loaded
-            audioElement.addEventListener('loadedmetadata', () => {
-                updateTime(0, audioElement.duration);
-            });
-
-            // Update time display during playback
-            audioElement.addEventListener('timeupdate', () => {
-                updateTime(audioElement.currentTime, audioElement.duration);
-                
-                // Handle fade out
-                const fadeOutDuration = 3;
-                const fadeOutStart = audioElement.duration - fadeOutDuration;
-                
-                if (audioElement.currentTime >= fadeOutStart) {
-                    const timeLeft = audioElement.duration - audioElement.currentTime;
-                    const volume = Math.max(0, timeLeft / fadeOutDuration);
-                    audioElement.volume = volume;
-                } else {
-                    audioElement.volume = 1;
-                }
-            });
-
-            // Handle seeking
-            document.getElementById('waveform').addEventListener('click', function(e) {
-                const rect = this.getBoundingClientRect();
-                const position = (e.clientX - rect.left) / rect.width;
-                audioElement.currentTime = position * audioElement.duration;
-            });
+            waveColor: '#9333ea50',
+            progressColor: '#9333ea',
+            cursorColor: 'transparent',
+            barWidth: 2,
+            barGap: 1,
+            responsive: true,
+            url: song.play_url || song.mp3_url
         });
 
-        return audioElement;
+        window.wavesurfer = wavesurfer;
+
+        // Update play/pause button on playback
+        wavesurfer.on('play', () => {
+            document.getElementById('playIcon').classList.add('hidden');
+            document.getElementById('pauseIcon').classList.remove('hidden');
+        });
+
+        wavesurfer.on('pause', () => {
+            document.getElementById('playIcon').classList.remove('hidden');
+            document.getElementById('pauseIcon').classList.add('hidden');
+        });
+
+        // Update time display
+        wavesurfer.on('audioprocess', () => {
+            updateTime(wavesurfer.getCurrentTime(), wavesurfer.getDuration());
+        });
+
+        wavesurfer.on('ready', () => {
+            updateTime(0, wavesurfer.getDuration());
+        });
+
+        return wavesurfer;
     }
 
     function togglePlay() {
-        const audio = document.getElementById('audio');
-        const playIcon = document.getElementById('playIcon');
-        const pauseIcon = document.getElementById('pauseIcon');
-        
-        if (audio.paused) {
-            audio.play();
-            playIcon.classList.add('hidden');
-            pauseIcon.classList.remove('hidden');
-        } else {
-            audio.pause();
-            playIcon.classList.remove('hidden');
-            pauseIcon.classList.add('hidden');
+        if (window.wavesurfer) {
+            window.wavesurfer.playPause();
         }
     }
 
