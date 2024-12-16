@@ -30,15 +30,15 @@
         .step-item {
             position: relative;
             padding: 0.5rem 1rem;
-            font-size: 1rem;
+            font-size: clamp(0.7rem, 2vw, 0.875rem);
             white-space: nowrap;
             -webkit-tap-highlight-color: transparent;
         }
 
         @media (min-width: 768px) {
             .step-item {
-                font-size: 1.25rem;
-                padding: 0.5rem 2rem;
+                font-size: clamp(0.65rem, 1vw, 0.75rem);
+                padding: clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 1rem);
             }
         }
 
