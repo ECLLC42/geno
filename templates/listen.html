@@ -310,10 +310,27 @@
         // Update time display
         wavesurfer.on('audioprocess', () => {
             updateTime(wavesurfer.getCurrentTime(), wavesurfer.getDuration());
+            
+            // Handle fade out
+            const fadeOutDuration = 3;
+            const fadeOutStart = wavesurfer.getDuration() - fadeOutDuration;
+            
+            if (wavesurfer.getCurrentTime() >= fadeOutStart) {
+                const timeLeft = wavesurfer.getDuration() - wavesurfer.getCurrentTime();
+                const volume = Math.max(0, timeLeft / fadeOutDuration);
+                wavesurfer.setVolume(volume);
+            } else {
+                wavesurfer.setVolume(1);
+            }
         });
 
         wavesurfer.on('ready', () => {
             updateTime(0, wavesurfer.getDuration());
+        });
+
+        // Reset volume when playback ends
+        wavesurfer.on('finish', () => {
+            wavesurfer.setVolume(1);
         });
 
         return wavesurfer;
