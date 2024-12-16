@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Audio Player</title>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+    <style>
+        .waveform {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .audio-player {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="audio-player">
+        <h3>Test Player</h3>
+        <div id="waveform"></div>
+        <button onclick="togglePlay()">Play/Pause</button>
+        <div id="fallback"></div>
+    </div>
+
+    <script>
+        // Test with your actual S3 URL
+        const testUrl = "https://genosonggenerator.s3.us-east-2.amazonaws.com/songs/user:1297-mureka:45311292604417-song:45361450319874/music_45361387405315_Rjcdc3AcbenXxfK4SJacpp_nrgeoo.mp3";
+
+        const wavesurfer = WaveSurfer.create({
+            container: '#waveform',
+            waveColor: '#9333ea50',
+            progressColor: '#9333ea',
+            backend: 'MediaElement',
+            mediaControls: true,
+            normalize: true,
+            url: testUrl
+        });
+
+        wavesurfer.on('error', function(err) {
+            console.error('WaveSurfer error:', err);
+            console.log('Falling back to standard audio player');
+            document.getElementById('fallback').innerHTML = `
+                <p>Fallback player:</p>
+                <audio controls>
+                    <source src="${testUrl}" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            `;
+        });
+
+        function togglePlay() {
+            wavesurfer.playPause();
+        }
+    </script>
+</body>
+</html> 

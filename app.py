@@ -2,7 +2,9 @@ from flask import Flask, request, jsonify, render_template
 import requests
 from dotenv import load_dotenv
 import os
-from lyric_generator.lyric_generator import generate_lyrics as generate_lyrics_ai
+from utils.lyric_generator import generate_lyrics as generate_lyrics_ai
+from tasks.song_tasks import generate_song_task, SongGenerationError
+from flask_socketio import SocketIO
 
 # Load environment variables
 load_dotenv()
@@ -13,6 +15,8 @@ app = Flask(__name__)
 API_URL = os.getenv("API_URL")
 API_TOKEN = os.getenv("API_TOKEN")
 ACCOUNT_ID = os.getenv("ACCOUNT_ID")
+
+socketio = SocketIO(app)
 
 @app.route('/')
 def index():
@@ -79,13 +83,47 @@ def select_moods():
 
 @app.route('/listen', methods=['POST'])
 def listen():
-    lyrics = request.form.get('lyrics')
-    genres = request.form.getlist('genres[]')
-    moods = request.form.getlist('moods[]')
-    return render_template('listen.html', 
-                         lyrics=lyrics,
-                         genres=genres,
-                         moods=moods)
+    try:
+        lyrics = request.form.get('lyrics')
+        genres = request.form.getlist('genres[]')
+        moods = request.form.getlist('moods[]')
+        
+        # Start the Celery task
+        task = generate_song_task.delay(lyrics, genres, moods)
+        
+        # Return task ID to client
+        return render_template('listen.html', 
+                             lyrics=lyrics,
+                             genres=genres,
+                             moods=moods,
+                             task_id=task.id)
+                             
+    except Exception as e:
+        return jsonify({"error": "An unexpected error occurred"}), 500
+
+@app.route('/task_status/<task_id>')
+def task_status(task_id):
+    task = generate_song_task.AsyncResult(task_id)
+    print(f"Task state: {task.state}")
+    print(f"Task info: {task.info}")
+    if task.state == 'PENDING':
+        response = {
+            'state': task.state,
+            'status': 'Task is pending...'
+        }
+    elif task.state == 'FAILURE':
+        response = {
+            'state': task.state,
+            'status': str(task.info.get('error', ''))
+        }
+    else:
+        print(f"Task meta: {task.info}")
+        response = {
+            'state': task.state,
+            'status': task.info.get('status', ''),
+            'song_data': task.info.get('song_data')
+        }
+    return jsonify(response)
 
 if __name__ == '__main__':
     app.run(debug=True)

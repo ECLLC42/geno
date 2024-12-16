@@ -12,15 +12,14 @@ def generate_lyrics(input_sentence):
     try:
         # Construct the prompt
         prompt = f"""Take this sentence: "{input_sentence}" 
-        and transform it into song lyrics with 2 verses and 1 chorus. 
-        Format the output with clear labels for Verse 1, Chorus, and Verse 2.
-        Make it emotional and meaningful while keeping the original sentiment of the input."""
+        and transform it into song lyrics with 2 verses and 1 chorus and 1 outro. 
+        Format the output as Verse 1: (content), Chorus: (content), Verse 2: (content), Outro: (content). Do NOT output in markdown '*', '**', '#', etc. DO NOT do that"""
 
         # Make the API call
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a creative songwriter who can turn ideas into meaningful lyrics. Your max token count is 200"},
+                {"role": "system", "content": "You are a songwriter for children's songs who can turn ideas into meaningful lyrics. Your max token count is 220"},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=250,

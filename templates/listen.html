@@ -6,6 +6,7 @@
     <title>Listen to Your Song!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
     <style>
         body {
             font-family: 'Comic Neue', cursive;
@@ -56,7 +57,405 @@
             display: inline-block;
             margin: 0.25rem;
         }
+
+        .audio-player-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 1rem;
+        }
+        
+        .version-title {
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .audio-player {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .play-button {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            border-radius: 50%;
+            background: #9333ea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .play-button:hover {
+            transform: scale(1.05);
+            background: #7928ca;
+        }
+        
+        .waveform-container {
+            background: #f3f4f6;
+            border-radius: 8px;
+            overflow: hidden;
+            height: 40px;
+        }
+        
+        .progress-bar {
+            position: absolute;
+            height: 100%;
+            background: rgba(138, 43, 226, 0.2);
+            pointer-events: none;
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .volume-slider {
+            width: 80px;
+            accent-color: #8a2be2;
+        }
+        
+        .download-button {
+            border: 2px solid #9333ea;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .time-display {
+            font-size: 0.875rem;
+            color: #6b7280;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .audio-player-wrapper {
+            margin-bottom: 2rem;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .audio-player {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .version-title {
+            color: #9333ea;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            height: 48px;
+        }
+
+        .play-button {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            border-radius: 50%;
+            background: #9333ea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .play-button:hover {
+            transform: scale(1.05);
+        }
+
+        .waveform-wrapper {
+            flex: 1;
+            position: relative;
+            height: 40px;
+            min-width: 0;
+        }
+
+        .waveform-container {
+            position: absolute;
+            inset: 0;
+            background: #f3f4f6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        .time-display {
+            font-family: monospace;
+            font-size: 0.875rem;
+            color: #6b7280;
+            min-width: 80px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .download-button {
+            padding: 0.5rem 1rem;
+            border: 2px solid #9333ea;
+            color: #9333ea;
+            font-weight: 500;
+            border-radius: 9999px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .download-button:hover {
+            background: #9333ea;
+            color: white;
+        }
+
+        .volume-control,
+        .volume-slider,
+        .progress-bar {
+            display: none;
+        }
     </style>
+    <script>
+    function pollTaskStatus(taskId) {
+        const statusElement = document.getElementById('taskStatus');
+        const playerElement = document.getElementById('songPlayer');
+        const errorElement = document.getElementById('errorMessage');
+
+        function checkStatus() {
+            fetch(`/task_status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Task status:', data);  // Debug log
+                    console.log('Song data:', data.song_data); // Add this debug log
+                    
+                    if (data.state === 'PENDING' || data.state === 'PROGRESS') {
+                        // Update status message
+                        statusElement.innerHTML = `
+                            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-pink-400 border-solid mx-auto mb-4"></div>
+                            <p class="text-3xl font-bold text-purple-600">${data.status}</p>
+                            <p class="text-xl text-purple-600 mt-2">Please wait...</p>
+                        `;
+                        // Continue polling
+                        setTimeout(checkStatus, 2000);
+                    }
+                    else if (data.state === 'SUCCESS') {
+                        console.log('Success state reached');
+                        // Hide loading status
+                        statusElement.classList.add('hidden');
+                        // Show player with song data
+                        playerElement.classList.remove('hidden');
+                        
+                        // Update player with song data
+                        if (data.song_data && data.song_data.songs) {
+                            console.log('Creating players for songs:', data.song_data.songs);
+                            playerElement.innerHTML = '';
+                            data.song_data.songs.forEach(song => {
+                                createWaveformPlayer(playerElement, song);
+                            });
+                        } else {
+                            console.log('No song data found in response');
+                        }
+                    }
+                    else if (data.state === 'FAILURE') {
+                        // Show error message
+                        statusElement.classList.add('hidden');
+                        errorElement.classList.remove('hidden');
+                        errorElement.innerHTML = `
+                            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                                <strong class="font-bold">Error: </strong>
+                                <span class="block sm:inline">${data.status}</span>
+                            </div>
+                            <a href="{{ url_for('create') }}" 
+                               class="mt-4 inline-block bg-gradient-to-r from-purple-400 to-pink-400 text-white px-6 py-2 rounded-full">
+                                Try Again
+                            </a>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling task status:', error);
+                    errorElement.classList.remove('hidden');
+                    errorElement.innerHTML = `
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                            <strong class="font-bold">Error: </strong>
+                            <span class="block sm:inline">Failed to check task status. Please try again.</span>
+                        </div>
+                    `;
+                });
+        }
+
+        // Start polling
+        checkStatus();
+    }
+
+    // Cleanup function for wavesurfer instances
+    function cleanupWavesurfer(version) {
+        const oldInstance = window[`wavesurfer${version}`];
+        if (oldInstance) {
+            oldInstance.destroy();
+            delete window[`wavesurfer${version}`];
+        }
+    }
+
+    function createWaveformPlayer(container, song) {
+        // Cleanup any existing instance
+        cleanupWavesurfer(song.version);
+
+        const playerHtml = `
+            <div class="audio-player-wrapper">
+                <div class="audio-player">
+                    <h3 class="version-title">Version ${song.version}</h3>
+                    <div class="player-controls">
+                        <button class="play-button" onclick="togglePlay(${song.version})">
+                            <svg id="playIcon-${song.version}" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                            </svg>
+                            <svg id="pauseIcon-${song.version}" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 011-1h.01a1 1 0 010 2H8a1 1 0 01-1-1zm3 0a1 1 0 011-1h.01a1 1 0 110 2H11a1 1 0 01-1-1z" />
+                            </svg>
+                        </button>
+                        <div class="waveform-wrapper">
+                            <div id="waveform-${song.version}" class="waveform-container"></div>
+                        </div>
+                        <div class="player-info">
+                            <span class="time-display" id="time-${song.version}">0:00 / ${song.duration || '0:00'}</span>
+                            <a href="${song.download_url}" class="download-button" download>Download Song</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Append HTML
+        container.insertAdjacentHTML('beforeend', playerHtml);
+
+        // Initialize WaveSurfer
+        const wavesurfer = WaveSurfer.create({
+            container: `#waveform-${song.version}`,
+            waveColor: '#9333ea50',
+            progressColor: '#9333ea',
+            cursorColor: '#ec4899',
+            barWidth: 2,
+            barGap: 1,
+            height: 40,
+            barRadius: 3,
+            backend: 'MediaElement',
+            normalize: true,
+            responsive: true,
+            fillParent: true,
+            minPxPerSec: 50,
+            url: song.mp3_url
+        });
+
+        // Event handlers
+        wavesurfer.on('ready', () => {
+            console.log(`Wavesurfer ${song.version} ready`);
+            updateTime(song.version, 0, wavesurfer.getDuration());
+        });
+
+        wavesurfer.on('play', () => {
+            console.log(`Playing version ${song.version}`);
+            const playIcon = document.getElementById(`playIcon-${song.version}`);
+            const pauseIcon = document.getElementById(`pauseIcon-${song.version}`);
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+        });
+
+        wavesurfer.on('pause', () => {
+            console.log(`Paused version ${song.version}`);
+            const playIcon = document.getElementById(`playIcon-${song.version}`);
+            const pauseIcon = document.getElementById(`pauseIcon-${song.version}`);
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+        });
+
+        wavesurfer.on('audioprocess', () => {
+            updateTime(song.version, wavesurfer.getCurrentTime(), wavesurfer.getDuration());
+        });
+
+        wavesurfer.on('error', (err) => {
+            console.error(`Player ${song.version} error:`, err);
+            const waveformEl = document.getElementById(`waveform-${song.version}`);
+            if (waveformEl) {
+                waveformEl.innerHTML = `
+                    <audio controls class="w-full">
+                        <source src="${song.mp3_url}" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>`;
+            }
+        });
+
+        // Store instance
+        window[`wavesurfer${song.version}`] = wavesurfer;
+
+        return wavesurfer;
+    }
+
+    function togglePlay(version) {
+        console.log(`Toggling play for version ${version}`);
+        const wavesurfer = window[`wavesurfer${version}`];
+        if (!wavesurfer) {
+            console.error(`No wavesurfer instance found for version ${version}`);
+            return;
+        }
+        
+        if (wavesurfer.isPlaying()) {
+            wavesurfer.pause();
+        } else {
+            wavesurfer.play();
+        }
+    }
+
+    function setVolume(version, value) {
+        window[`wavesurfer${version}`].setVolume(value);
+    }
+
+    function updateTime(version, current, total) {
+        const timeDisplay = document.getElementById(`time-${version}`);
+        timeDisplay.textContent = `${formatTime(current)} / ${formatTime(total)}`;
+    }
+
+    function formatTime(seconds) {
+        seconds = Math.floor(seconds);
+        const minutes = Math.floor(seconds / 60);
+        seconds = seconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Start polling when page loads if we have a task ID
+    document.addEventListener('DOMContentLoaded', function() {
+        const taskId = '{{ task_id }}';
+        if (taskId) {
+            pollTaskStatus(taskId);
+        }
+    });
+    </script>
 </head>
 <body class="p-8">
     <div class="max-w-4xl mx-auto">
@@ -77,8 +476,10 @@
         </div>
 
         <div class="glass-card p-8">
-            <h1 class="text-3xl font-bold text-center text-purple-600 mb-8">
-                🎵 Your Song is Ready! 🎵
+            <h1 class="text-3xl font-bold text-center mb-8">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
+                    🎵 Your AI-Generated Songs Are Ready! 🎵
+                </span>
             </h1>
 
             <!-- Song Summary -->
@@ -133,24 +534,19 @@
                 </div>
             </div>
 
-            <!-- Song Player Placeholder -->
-            <div class="glass-card p-8 text-center">
-                <h2 class="text-2xl font-bold text-purple-600 mb-4">
-                    🎧 Your Song
-                </h2>
-                <div class="bg-white bg-opacity-50 rounded-lg p-8">
-                    <p class="text-gray-600">
-                        Song player coming soon...
-                    </p>
-                    <!-- Placeholder for audio player -->
-                    <div class="mt-4">
-                        <div class="w-16 h-16 mx-auto rounded-full bg-purple-100 flex items-center justify-center">
-                            <svg class="w-8 h-8 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
+            <!-- Song Player -->
+            <div id="taskStatus" class="glass-card p-8 text-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-pink-400 border-solid mx-auto mb-4"></div>
+                <p class="text-3xl font-bold text-purple-600">✨ Making The Magic Happen! ✨</p>
+                <p class="text-xl text-purple-600 mt-2">This may take up to 2 minutes</p>
+            </div>
+
+            <div id="errorMessage" class="glass-card p-8 text-center hidden">
+                <!-- Error message will be inserted here -->
+            </div>
+
+            <div id="songPlayer" class="glass-card p-8 text-center hidden">
+                <!-- Song player will be inserted here -->
             </div>
         </div>
     </div>

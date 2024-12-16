@@ -3,4 +3,13 @@ requests
 python-dotenv
 openai
 gunicorn
+boto3
+celery
+redis
+flask-socketio
+eventlet
+gevent
+gevent-websocket
+python-engineio>=3.13.2
+python-socketio>=5.0.4
 
