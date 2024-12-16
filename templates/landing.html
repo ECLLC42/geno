@@ -20,6 +20,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            padding: clamp(1rem, 4vw, 2rem);
         }
         
         .glass-card {
@@ -29,11 +30,24 @@
             border-radius: 20px;
             border: 2px solid rgba(255, 255, 255, 0.18);
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            padding: 2rem;
+            padding: clamp(0.5rem, 2vw, 1rem);
             text-align: center;
-            max-width: 90%;
-            width: 800px;
-            margin: 2rem;
+            width: min(90vw, 800px);
+            margin: 0.5rem;
+        }
+
+        .inner-glass-card {
+            width: 100%;
+            margin: 0 auto clamp(1rem, 2vw, 1.5rem);
+            padding: clamp(1rem, 3vw, 1.5rem);
+            background: rgba(255, 255, 255, 0.25);
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            max-height: 50vh;
+            overflow-y: auto;
         }
 
         .logo-bounce {
@@ -74,11 +88,31 @@
     <div class="glass-card">
         <img src="https://parproject2.s3.us-east-2.amazonaws.com/geno.png" 
              alt="Geno Logo" 
-             class="logo-bounce mx-auto mb-8"
-             style="width: 420px; height: auto;">
+             class="logo-bounce mx-auto"
+             style="width: 420px; height: auto; margin-bottom: 0;">
         
-        <h1 class="text-5xl font-bold mb-8 text-purple-600" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.1)">Geno the Song Generator</h1>
-        <p class="text-2xl mb-8 text-gray-700">Your magical AI companion for creating unique songs! ✨🎵</p>
+        <h1 class="font-bold mb-8 text-purple-600" 
+            style="font-size: clamp(2.75rem, 7vw, 4.5rem); text-shadow: 2px 2px 4px rgba(0,0,0,0.1)">
+            Geno the Song Generator
+        </h1>
+        <p class="mb-8 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500" 
+           style="font-size: clamp(1.5rem, 5vw, 2.5rem);">
+            ✨🎵 <strong>Meet Geno!</strong>
+        </p>
+        
+        <div class="glass-card inner-glass-card mb-8">
+            <p class="leading-relaxed bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-400 text-center" 
+               style="font-size: clamp(1rem, 2.5vw, 1.25rem); line-height: 1.6; padding: clamp(0.5rem, 1.5vw, 1rem);">
+                Our goal is to help you create an incredible custom song for your child or children. 
+                This will give you a unique gift that you can pass on to your family and is yours forever.
+            </p>
+            <br class="hidden md:block">
+            <p class="leading-relaxed bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-300 text-center" 
+               style="font-size: clamp(1rem, 2.5vw, 1.25rem); line-height: 1.6; padding: clamp(0.5rem, 1.5vw, 1rem);">
+                A true legacy of love and caring. 
+                We at Gift Connect hope you enjoy creating songs for your children as much as we enjoyed creating this amazing tool for you!
+            </p>
+        </div>
         
         <a href="{{ url_for('create') }}" class="start-button inline-block">
             <span class="text-2xl">Get Started!</span>
