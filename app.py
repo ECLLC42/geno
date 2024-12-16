@@ -5,6 +5,11 @@ import os
 from utils.lyric_generator import generate_lyrics as generate_lyrics_ai
 from tasks.song_tasks import generate_song_task, SongGenerationError
 from flask_socketio import SocketIO
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -81,49 +86,73 @@ def select_moods():
     genres = request.form.getlist('genres[]')
     return render_template('moods.html', lyrics=lyrics, genres=genres)
 
+@app.route('/select_vocals', methods=['POST'])
+def select_vocals():
+    lyrics = request.form.get('lyrics')
+    genres = request.form.getlist('genres[]')
+    moods = request.form.getlist('moods[]')
+    return render_template('vocals.html', lyrics=lyrics, genres=genres, moods=moods)
+
 @app.route('/listen', methods=['POST'])
 def listen():
     try:
         lyrics = request.form.get('lyrics')
         genres = request.form.getlist('genres[]')
         moods = request.form.getlist('moods[]')
+        vocals = request.form.get('vocals')
         
-        # Start the Celery task
-        task = generate_song_task.delay(lyrics, genres, moods)
+        # Enhanced logging
+        logger.info("=== Starting Song Generation ===")
+        logger.info(f"Lyrics (first 50 chars): {lyrics[:50]}...")
+        logger.info(f"Selected Genres: {genres}")
+        logger.info(f"Selected Moods: {moods}")
+        logger.info(f"Selected Vocals: {vocals}")
         
-        # Return task ID to client
+        # Start the Celery task with vocals parameter
+        task = generate_song_task.delay(lyrics, genres, moods, vocals)
+        logger.info(f"Created Celery task with ID: {task.id}")
+        
         return render_template('listen.html', 
                              lyrics=lyrics,
                              genres=genres,
                              moods=moods,
+                             vocals=vocals,
                              task_id=task.id)
                              
     except Exception as e:
+        logger.error(f"Error in listen route: {str(e)}", exc_info=True)
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 @app.route('/task_status/<task_id>')
 def task_status(task_id):
-    task = generate_song_task.AsyncResult(task_id)
-    print(f"Task state: {task.state}")
-    print(f"Task info: {task.info}")
-    if task.state == 'PENDING':
-        response = {
-            'state': task.state,
-            'status': 'Task is pending...'
-        }
-    elif task.state == 'FAILURE':
-        response = {
-            'state': task.state,
-            'status': str(task.info.get('error', ''))
-        }
-    else:
-        print(f"Task meta: {task.info}")
-        response = {
-            'state': task.state,
-            'status': task.info.get('status', ''),
-            'song_data': task.info.get('song_data')
-        }
-    return jsonify(response)
+    try:
+        task = generate_song_task.AsyncResult(task_id)
+        logger.info(f"Task state: {task.state}")
+        logger.info(f"Task info: {task.info}")
+        
+        if task.state == 'PENDING':
+            response = {
+                'state': task.state,
+                'status': 'Task is pending...'
+            }
+        elif task.state == 'FAILURE':
+            response = {
+                'state': task.state,
+                'status': str(task.info.get('error', 'An error occurred'))
+            }
+        else:
+            response = {
+                'state': task.state,
+                'status': task.info.get('status', ''),
+                'song_data': task.info.get('song_data', {})
+            }
+        return jsonify(response)
+    except Exception as e:
+        logger.error(f"Error checking task status: {str(e)}")
+        return jsonify({
+            'state': 'ERROR',
+            'status': 'Error checking task status'
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

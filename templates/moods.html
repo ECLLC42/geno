@@ -97,7 +97,7 @@
         <div class="glass-card p-8">
             <h2 class="text-2xl font-bold text-center text-purple-600 mb-6">✨ Choose Up to 3 Moods! ✨</h2>
             
-            <form id="moodForm" action="{{ url_for('listen') }}" method="POST" class="text-center">
+            <form id="moodForm" action="{{ url_for('select_vocals') }}" method="POST" class="text-center">
                 <!-- Hidden inputs for previous selections -->
                 <input type="hidden" name="lyrics" value="{{ lyrics }}">
                 {% for genre in genres %}

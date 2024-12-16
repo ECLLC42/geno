@@ -193,6 +193,7 @@
             position: relative;
             height: 40px;
             min-width: 0;
+            overflow: hidden;
         }
 
         .waveform-container {
@@ -201,6 +202,7 @@
             background: #f3f4f6;
             border-radius: 8px;
             overflow: hidden;
+            width: 100%;
         }
 
         .player-info {
@@ -240,6 +242,13 @@
         .progress-bar {
             display: none;
         }
+
+        .spectrum-analyzer {
+            width: 100%;
+            height: 100%;
+            background: #f3f4f6;
+            border-radius: 8px;
+        }
     </style>
     <script>
     function pollTaskStatus(taskId) {
@@ -252,38 +261,26 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log('Task status:', data);  // Debug log
-                    console.log('Song data:', data.song_data); // Add this debug log
                     
                     if (data.state === 'PENDING' || data.state === 'PROGRESS') {
-                        // Update status message
                         statusElement.innerHTML = `
                             <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-pink-400 border-solid mx-auto mb-4"></div>
                             <p class="text-3xl font-bold text-purple-600">${data.status}</p>
-                            <p class="text-xl text-purple-600 mt-2">Please wait...</p>
+                            <p class="text-xl text-purple-600 mt-2">Please wait for up to 2 minutes...</p>
                         `;
-                        // Continue polling
                         setTimeout(checkStatus, 2000);
                     }
-                    else if (data.state === 'SUCCESS') {
-                        console.log('Success state reached');
-                        // Hide loading status
+                    else if (data.state === 'SUCCESS' && data.song_data && data.song_data.songs) {
+                        console.log('Success! Songs:', data.song_data.songs);
                         statusElement.classList.add('hidden');
-                        // Show player with song data
                         playerElement.classList.remove('hidden');
                         
-                        // Update player with song data
-                        if (data.song_data && data.song_data.songs) {
-                            console.log('Creating players for songs:', data.song_data.songs);
-                            playerElement.innerHTML = '';
-                            data.song_data.songs.forEach(song => {
-                                createWaveformPlayer(playerElement, song);
-                            });
-                        } else {
-                            console.log('No song data found in response');
-                        }
+                        playerElement.innerHTML = '';
+                        data.song_data.songs.forEach(song => {
+                            createWaveformPlayer(playerElement, song);
+                        });
                     }
-                    else if (data.state === 'FAILURE') {
-                        // Show error message
+                    else if (data.state === 'FAILURE' || data.state === 'ERROR') {
                         statusElement.classList.add('hidden');
                         errorElement.classList.remove('hidden');
                         errorElement.innerHTML = `
@@ -291,39 +288,29 @@
                                 <strong class="font-bold">Error: </strong>
                                 <span class="block sm:inline">${data.status}</span>
                             </div>
-                            <a href="{{ url_for('create') }}" 
-                               class="mt-4 inline-block bg-gradient-to-r from-purple-400 to-pink-400 text-white px-6 py-2 rounded-full">
-                                Try Again
-                            </a>
                         `;
                     }
                 })
                 .catch(error => {
                     console.error('Error polling task status:', error);
-                    errorElement.classList.remove('hidden');
-                    errorElement.innerHTML = `
-                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                            <strong class="font-bold">Error: </strong>
-                            <span class="block sm:inline">Failed to check task status. Please try again.</span>
-                        </div>
-                    `;
                 });
         }
 
-        // Start polling
         checkStatus();
     }
 
     // Cleanup function for wavesurfer instances
     function cleanupWavesurfer(version) {
-        const oldInstance = window[`wavesurfer${version}`];
-        if (oldInstance) {
-            oldInstance.destroy();
-            delete window[`wavesurfer${version}`];
+        const cleanup = window[`cleanup${version}`];
+        if (cleanup) {
+            cleanup();
+            delete window[`cleanup${version}`];
         }
     }
 
     function createWaveformPlayer(container, song) {
+        console.log('Creating player for song:', song);
+        
         // Cleanup any existing instance
         cleanupWavesurfer(song.version);
 
@@ -333,11 +320,11 @@
                     <h3 class="version-title">Version ${song.version}</h3>
                     <div class="player-controls">
                         <button class="play-button" onclick="togglePlay(${song.version})">
-                            <svg id="playIcon-${song.version}" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                            <svg id="playIcon-${song.version}" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
                             </svg>
-                            <svg id="pauseIcon-${song.version}" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 011-1h.01a1 1 0 010 2H8a1 1 0 01-1-1zm3 0a1 1 0 011-1h.01a1 1 0 110 2H11a1 1 0 01-1-1z" />
+                            <svg id="pauseIcon-${song.version}" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                             </svg>
                         </button>
                         <div class="waveform-wrapper">
@@ -355,7 +342,7 @@
         // Append HTML
         container.insertAdjacentHTML('beforeend', playerHtml);
 
-        // Initialize WaveSurfer
+        // Initialize WaveSurfer with error handling
         const wavesurfer = WaveSurfer.create({
             container: `#waveform-${song.version}`,
             waveColor: '#9333ea50',
@@ -369,66 +356,83 @@
             normalize: true,
             responsive: true,
             fillParent: true,
-            minPxPerSec: 50,
-            url: song.mp3_url
+            minPxPerSec: 1,
+            // Add high quality settings
+            sampleRate: 44100,  // CD quality sample rate
+            audioRate: 1,       // Normal playback speed
+            splitChannels: false, // Stereo output
+            mediaControls: false,
+            audioContext: new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 44100,
+                latencyHint: 'playback'
+            })
         });
 
-        // Event handlers
+        // Store wavesurfer instance
+        window[`wavesurfer${song.version}`] = wavesurfer;
+
+        // Add fade out handler
+        wavesurfer.on('audioprocess', () => {
+            const currentTime = wavesurfer.getCurrentTime();
+            const duration = wavesurfer.getDuration();
+            const fadeOutStart = duration - 4; // Start fade 4 seconds before end (2s fade + 2s silence)
+            const silenceStart = duration - 2; // Start silence 2 seconds before end
+            
+            if (currentTime >= silenceStart) {
+                // Complete silence for last 2 seconds
+                wavesurfer.setVolume(0);
+            } else if (currentTime >= fadeOutStart) {
+                // Fade out over 2 seconds
+                const volume = Math.max(0, (silenceStart - currentTime) / 2);
+                wavesurfer.setVolume(volume);
+            } else {
+                wavesurfer.setVolume(1);
+            }
+            
+            updateTime(song.version, currentTime, duration);
+        });
+
+        // Add ready event listener
         wavesurfer.on('ready', () => {
-            console.log(`Wavesurfer ${song.version} ready`);
+            console.log('WaveSurfer ready');
             updateTime(song.version, 0, wavesurfer.getDuration());
         });
 
-        wavesurfer.on('play', () => {
-            console.log(`Playing version ${song.version}`);
-            const playIcon = document.getElementById(`playIcon-${song.version}`);
-            const pauseIcon = document.getElementById(`pauseIcon-${song.version}`);
-            playIcon.classList.add('hidden');
-            pauseIcon.classList.remove('hidden');
+        // Add error handler
+        wavesurfer.on('error', err => {
+            console.error('WaveSurfer error:', err);
         });
 
-        wavesurfer.on('pause', () => {
-            console.log(`Paused version ${song.version}`);
-            const playIcon = document.getElementById(`playIcon-${song.version}`);
-            const pauseIcon = document.getElementById(`pauseIcon-${song.version}`);
-            playIcon.classList.remove('hidden');
-            pauseIcon.classList.add('hidden');
-        });
-
-        wavesurfer.on('audioprocess', () => {
-            updateTime(song.version, wavesurfer.getCurrentTime(), wavesurfer.getDuration());
-        });
-
-        wavesurfer.on('error', (err) => {
-            console.error(`Player ${song.version} error:`, err);
-            const waveformEl = document.getElementById(`waveform-${song.version}`);
-            if (waveformEl) {
-                waveformEl.innerHTML = `
-                    <audio controls class="w-full">
-                        <source src="${song.mp3_url}" type="audio/mpeg">
-                        Your browser does not support the audio element.
-                    </audio>`;
-            }
-        });
-
-        // Store instance
-        window[`wavesurfer${song.version}`] = wavesurfer;
+        // Load audio
+        try {
+            const audioUrl = song.play_url || song.mp3_url;
+            console.log('Loading audio from:', audioUrl);
+            wavesurfer.load(audioUrl);
+        } catch (err) {
+            console.error('Error loading audio:', err);
+        }
 
         return wavesurfer;
     }
 
     function togglePlay(version) {
-        console.log(`Toggling play for version ${version}`);
         const wavesurfer = window[`wavesurfer${version}`];
         if (!wavesurfer) {
             console.error(`No wavesurfer instance found for version ${version}`);
             return;
         }
         
+        const playIcon = document.getElementById(`playIcon-${version}`);
+        const pauseIcon = document.getElementById(`pauseIcon-${version}`);
+        
         if (wavesurfer.isPlaying()) {
             wavesurfer.pause();
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
         } else {
             wavesurfer.play();
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
         }
     }
 
@@ -520,7 +524,7 @@
                 <div class="glass-card">
                     <details class="cursor-pointer">
                         <summary class="p-4 text-xl font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200 flex items-center">
-                            <span>🎭 Selected Moods</span>
+                            <span> Selected Moods</span>
                             <svg class="w-4 h-4 ml-2 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                             </svg>
