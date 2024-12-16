@@ -43,102 +43,6 @@
             color: #cbd5e0;
         }
 
-        .summary-section {
-            background: rgba(255, 255, 255, 0.4);
-            border-radius: 15px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .tag {
-            background: rgba(147, 51, 234, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            display: inline-block;
-            margin: 0.25rem;
-        }
-
-        .audio-player-container {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 1rem;
-        }
-        
-        .version-title {
-            color: #9333ea;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-        
-        .audio-player {
-            background: white;
-            border-radius: 12px;
-            padding: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            display: grid;
-            grid-template-columns: auto 1fr auto auto;
-            gap: 1rem;
-            align-items: center;
-        }
-        
-        .play-button {
-            width: 48px;
-            height: 48px;
-            min-width: 48px;
-            border-radius: 50%;
-            background: #9333ea;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .play-button:hover {
-            transform: scale(1.05);
-            background: #7928ca;
-        }
-        
-        .waveform-container {
-            background: #f3f4f6;
-            border-radius: 8px;
-            overflow: hidden;
-            height: 40px;
-        }
-        
-        .progress-bar {
-            position: absolute;
-            height: 100%;
-            background: rgba(138, 43, 226, 0.2);
-            pointer-events: none;
-        }
-        
-        .volume-control {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .volume-slider {
-            width: 80px;
-            accent-color: #8a2be2;
-        }
-        
-        .download-button {
-            border: 2px solid #9333ea;
-            font-weight: 500;
-            white-space: nowrap;
-        }
-        
-        .time-display {
-            font-size: 0.875rem;
-            color: #6b7280;
-            min-width: 100px;
-            text-align: center;
-        }
-
         .audio-player-wrapper {
             margin-bottom: 2rem;
             width: 100%;
@@ -237,17 +141,8 @@
             color: white;
         }
 
-        .volume-control,
-        .volume-slider,
-        .progress-bar {
-            display: none;
-        }
-
-        .spectrum-analyzer {
-            width: 100%;
-            height: 100%;
-            background: #f3f4f6;
-            border-radius: 8px;
+        .hidden {
+            display: none !important;
         }
     </style>
     <script>
@@ -335,11 +230,10 @@
     }
 
     // Cleanup function for wavesurfer instances
-    function cleanupWavesurfer(version) {
-        const cleanup = window[`cleanup${version}`];
-        if (cleanup) {
-            cleanup();
-            delete window[`cleanup${version}`];
+    function cleanupWavesurfer() {
+        if (window.wavesurfer) {
+            window.wavesurfer.destroy();
+            window.wavesurfer = null;
         }
     }
 
@@ -347,26 +241,26 @@
         console.log('Creating player for song:', song);
         
         // Cleanup any existing instance
-        cleanupWavesurfer(song.version);
+        cleanupWavesurfer();
 
         const playerHtml = `
             <div class="audio-player-wrapper">
                 <div class="audio-player">
-                    <h3 class="version-title">Version ${song.version}</h3>
+                    <h3 class="version-title">✨ Your Magical Song ✨</h3>
                     <div class="player-controls">
-                        <button class="play-button" onclick="togglePlay(${song.version})">
-                            <svg id="playIcon-${song.version}" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <button class="play-button" onclick="togglePlay()">
+                            <svg id="playIcon" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z"/>
                             </svg>
-                            <svg id="pauseIcon-${song.version}" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24">
+                            <svg id="pauseIcon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                             </svg>
                         </button>
                         <div class="waveform-wrapper">
-                            <div id="waveform-${song.version}" class="waveform-container"></div>
+                            <div id="waveform" class="waveform-container" style="width: 100%; height: 100%;"></div>
                         </div>
                         <div class="player-info">
-                            <span class="time-display" id="time-${song.version}">0:00 / ${song.duration || '0:00'}</span>
+                            <span class="time-display" id="time">0:00 / ${song.duration || '0:00'}</span>
                             <a href="${song.download_url}" class="download-button" download>Download Song</a>
                         </div>
                     </div>
@@ -379,7 +273,7 @@
 
         // Initialize WaveSurfer with error handling
         const wavesurfer = WaveSurfer.create({
-            container: `#waveform-${song.version}`,
+            container: '#waveform',
             waveColor: '#9333ea50',
             progressColor: '#9333ea',
             cursorColor: '#ec4899',
@@ -391,28 +285,26 @@
             normalize: true,
             responsive: true,
             fillParent: true,
-            minPxPerSec: 1,
-            mediaControls: false
+            scrollParent: false,
+            minPxPerSec: 50
         });
 
         // Store wavesurfer instance
-        window[`wavesurfer${song.version}`] = wavesurfer;
+        window.wavesurfer = wavesurfer;
 
         // Add fade out handler
         wavesurfer.on('audioprocess', () => {
             const currentTime = wavesurfer.getCurrentTime();
             const duration = wavesurfer.getDuration();
             
-            // Only process if we have valid times and wavesurfer is ready
             if (!currentTime || !duration || !wavesurfer.isReady) {
                 return;
             }
 
-            const fadeOutStart = duration - 2; // 2 second fade out
+            const fadeOutStart = duration - 2;
             
             if (currentTime >= fadeOutStart) {
                 try {
-                    // Ensure volume is between 0 and 1
                     const volume = Math.max(0, Math.min(1, (duration - currentTime) / 2));
                     if (Number.isFinite(volume)) {
                         wavesurfer.setVolume(volume);
@@ -428,7 +320,7 @@
                 }
             }
             
-            updateTime(song.version, currentTime, duration);
+            updateTime(currentTime, duration);
         });
 
         // Ensure volume is reset when song ends
@@ -440,7 +332,7 @@
         // Add ready event listener
         wavesurfer.on('ready', () => {
             console.log('WaveSurfer ready');
-            updateTime(song.version, 0, wavesurfer.getDuration());
+            updateTime(0, wavesurfer.getDuration());
         });
 
         // Add error handler
@@ -465,34 +357,29 @@
         return wavesurfer;
     }
 
-    function togglePlay(version) {
-        const wavesurfer = window[`wavesurfer${version}`];
-        if (!wavesurfer) {
-            console.error(`No wavesurfer instance found for version ${version}`);
+    function togglePlay() {
+        if (!window.wavesurfer) {
+            console.error('No wavesurfer instance found');
             return;
         }
         
         try {
-            if (wavesurfer.isPlaying()) {
-                wavesurfer.pause();
-                document.getElementById(`playIcon-${version}`).classList.remove('hidden');
-                document.getElementById(`pauseIcon-${version}`).classList.add('hidden');
+            if (window.wavesurfer.isPlaying()) {
+                window.wavesurfer.pause();
+                document.getElementById('playIcon').classList.remove('hidden');
+                document.getElementById('pauseIcon').classList.add('hidden');
             } else {
-                wavesurfer.play();
-                document.getElementById(`playIcon-${version}`).classList.add('hidden');
-                document.getElementById(`pauseIcon-${version}`).classList.remove('hidden');
+                window.wavesurfer.play();
+                document.getElementById('playIcon').classList.add('hidden');
+                document.getElementById('pauseIcon').classList.remove('hidden');
             }
         } catch (err) {
             console.error('Error toggling play state:', err);
         }
     }
 
-    function setVolume(version, value) {
-        window[`wavesurfer${version}`].setVolume(value);
-    }
-
-    function updateTime(version, current, total) {
-        const timeDisplay = document.getElementById(`time-${version}`);
+    function updateTime(current, total) {
+        const timeDisplay = document.getElementById('time');
         timeDisplay.textContent = `${formatTime(current)} / ${formatTime(total)}`;
     }
 
@@ -507,11 +394,10 @@
         console.log('showPlayer called with:', songData);
         const songPlayer = document.getElementById('songPlayer');
         songPlayer.innerHTML = '';
-        if (songData.songs) {
-            songData.songs.forEach(song => {
-                console.log('Creating player for song:', song);
-                createWaveformPlayer(songPlayer, song);
-            });
+        if (songData.songs && songData.songs[0]) {  // Since we only have version 2 now
+            const song = songData.songs[0];  // Get the only song (version 2)
+            console.log('Creating player for song:', song);
+            createWaveformPlayer(songPlayer, song);
         }
     }
 
@@ -565,7 +451,7 @@
                 <!-- Rest of the content -->
                 <h1 class="text-3xl font-bold text-center mb-8">
                     <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500">
-                        🎵 Your AI-Generated Songs Are Ready! 🎵
+                        🎵 Your AI-Generated Song Is Ready! 🎵
                     </span>
                 </h1>
 
@@ -574,7 +460,7 @@
                     <!-- Lyrics Section -->
                     <div class="glass-card p-4">
                         <details class="cursor-pointer">
-                            <summary class="text-xl font-bold text-purple-600">🎵 Lyrics</summary>
+                            <summary class="text-xl font-bold text-purple-600"> Lyrics</summary>
                             <div class="mt-4 bg-white bg-opacity-50 rounded-lg p-4 whitespace-pre-line">
                                 {{ lyrics }}
                             </div>
