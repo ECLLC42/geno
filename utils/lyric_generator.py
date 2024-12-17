@@ -13,7 +13,7 @@ def generate_lyrics(input_sentence):
         # Construct the prompt
         prompt = f"""Take this sentence: "{input_sentence}" 
         and transform it into song lyrics with 2 verses and 1 chorus and 1 outros. 
-        Format the output as Verse 1: "(content), Chorus: (content), Verse 2: (content), Outro: (content)" Do NOT output in markdown '*', '**', '#', etc. DO NOT do that"""
+        Format the output as "[Verse 1]: (content)", "[Chorus]: (content)", "[Verse 2]: (content)", "[Outro]: (content)" Do NOT output in markdown '*', '**', '#', etc. DO NOT do that"""
 
         # Make the API call
         response = client.chat.completions.create(
