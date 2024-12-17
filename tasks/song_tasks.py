@@ -23,6 +23,11 @@ class SongGenerationError(Exception):
 def generate_song_task(self, lyrics, genres, moods, vocals, instruments):
     task_id = self.request.id
     logger.info(f"Starting song generation task {task_id}")
+    logger.info(f"Received lyrics: {lyrics}")
+    logger.info(f"Received genres: {genres}")
+    logger.info(f"Received moods: {moods}")
+    logger.info(f"Received vocals: {vocals}")
+    logger.info(f"Received instruments: {instruments}")
     
     try:
         result = generate_song(lyrics, genres, moods, vocals, instruments)

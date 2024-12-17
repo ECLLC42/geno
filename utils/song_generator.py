@@ -1,37 +1,13 @@
-import requests
 import os
-from dotenv import load_dotenv
+import requests
 import json
-from utils.s3_handler import S3Handler, S3Error, S3DownloadError, S3UploadError
 import logging
-import time
+from utils.s3_handler import S3Handler
 
-load_dotenv()
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create a file handler for ref_input.log
-ref_handler = logging.FileHandler('ref_input.log')
-ref_handler.setLevel(logging.INFO)
-ref_formatter = logging.Formatter('%(asctime)s - %(message)s')
-ref_handler.setFormatter(ref_formatter)
-logger.addHandler(ref_handler)
-
 class SongGenerationError(Exception):
-    """Custom exception for song generation errors"""
     pass
-
-# When generating the MP3, we should use these high quality settings:
-AUDIO_SETTINGS = {
-    'bitrate': '320k',  # Highest MP3 bitrate
-    'sample_rate': 44100,  # CD quality sample rate
-    'channels': 2,  # Stereo
-    'format': 'mp3',
-    'codec': 'libmp3lame',
-    'quality': 0  # Highest quality setting for LAME encoder
-}
 
 def generate_song(lyrics, genres, moods, vocals, instruments):
     try:
@@ -41,20 +17,24 @@ def generate_song(lyrics, genres, moods, vocals, instruments):
             "Authorization": f"Bearer {os.getenv('API_TOKEN')}"
         }
         
-        # Validate inputs
-        if not lyrics:
-            raise SongGenerationError("Lyrics are required")
-        if not genres and not moods:
-            raise SongGenerationError("At least one genre or mood is required")
-        if not vocals:
-            raise SongGenerationError("Vocal type is required")
+        # Combine genres, moods, instruments, vocals for the desc parameter
+        # The desc parameter should be a comma-separated string of musical attributes
+        desc_elements = []
+        if genres:
+            desc_elements.extend(genres)
+        if moods:
+            desc_elements.extend(moods)
+        if instruments:
+            desc_elements.extend(instruments)
+        if vocals:
+            desc_elements.append(vocals)
             
-        # Combine genres, moods, instruments, vocals, and fade for the desc parameter
-        desc_elements = genres + moods + instruments + [vocals + ", fade out"]
+        # Create the final desc string
         desc = ", ".join(desc_elements)
         
-        # Log the description parameter
-        logger.info(f"Description parameter sent to API: {desc}")
+        # Log the request parameters for debugging
+        logger.info(f"Sending request with lyrics: {lyrics}")
+        logger.info(f"Description parameter: {desc}")
         
         body = {
             "account": os.getenv('ACCOUNT_ID'),
@@ -71,26 +51,21 @@ def generate_song(lyrics, genres, moods, vocals, instruments):
             
             # Get the last song (most refined version)
             song = data['songs'][-1]
-            if not song:
-                raise SongGenerationError("No valid song was generated")
             
-            # Initialize S3 handler
+            # Initialize S3 handler and process URLs
             s3_handler = S3Handler()
-            
             try:
                 urls = s3_handler.download_and_upload_to_s3(
                     song['mp3_url'],
                     song['song_id']
                 )
-                # Update both URLs
+                # Update URLs in response
                 song['mp3_url'] = urls['play_url']
                 song['download_url'] = urls['download_url']
             except Exception as e:
                 logger.error(f"S3 operation failed: {str(e)}")
-                # Keep original URL for both
                 song['download_url'] = song['mp3_url']
             
-            # Return the song
             return {'songs': [song]}
             
         elif response.status_code == 401:
@@ -106,4 +81,4 @@ def generate_song(lyrics, genres, moods, vocals, instruments):
     except json.JSONDecodeError:
         raise SongGenerationError("Invalid response from API")
     except Exception as e:
-        raise SongGenerationError(f"Unexpected error: {str(e)}") 
+        raise SongGenerationError(f"Unexpected error: {str(e)}")
