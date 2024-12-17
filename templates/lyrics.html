@@ -122,13 +122,16 @@
             <form action="{{ url_for('generate_lyrics_route') }}" method="POST" class="space-y-6">
                 <div>
                     <textarea 
-                        name="lyrics" 
+                        name="lyrics_input" 
                         rows="6" 
                         class="mood-select text-left w-full p-4 text-lg"
                         placeholder="Example: A love song about a magical journey through the stars..."
                         required
                     ></textarea>
                 </div>
+                
+                <!-- Add hidden field for generated lyrics -->
+                <input type="hidden" name="lyrics" value="{{ generated_lyrics if generated_lyrics else '' }}">
                 
                 <div class="text-center">
                     <button 

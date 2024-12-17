@@ -80,6 +80,7 @@ def create():
 def generate_lyrics_route():
     user_input = request.form.get('lyrics_input')
     generated_lyrics = generate_lyrics_ai(user_input)
+    logger.info(f"Generated lyrics from OpenAI: {generated_lyrics[:100]}...")
     return render_template('music_styles.html', lyrics=generated_lyrics)
 
 @app.route('/select_instruments', methods=['POST'])
