@@ -11,6 +11,9 @@ class SongGenerationError(Exception):
 
 def generate_song(lyrics, genres, moods, vocals, instruments):
     try:
+        # Log the incoming lyrics
+        logger.info(f"Preparing to send lyrics to Mureka API: {lyrics[:100]}...")
+        
         api_url = "https://api.useapi.net/v1/mureka/music/create-advanced"
         headers = {
             "Content-Type": "application/json",

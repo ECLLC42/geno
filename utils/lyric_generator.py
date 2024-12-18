@@ -8,10 +8,10 @@ load_dotenv()
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-def generate_lyrics(input_sentence):
+def generate_lyrics(lyrics):
     try:
         # Construct the prompt
-        prompt = f"""Take this sentence: "{input_sentence}" 
+        prompt = f"""Take this sentence: "{lyrics}" 
         and transform it into song lyrics with 2 verses and 1 chorus and 1 outros. 
         Format the output as "[Verse 1]: (content)", "[Chorus]: (content)", "[Verse 2]: (content)", "[Outro]: (content)" Do NOT output in markdown '*', '**', '#', etc. DO NOT do that"""
 
@@ -31,9 +31,3 @@ def generate_lyrics(input_sentence):
 
     except Exception as e:
         return f"Error generating lyrics: {str(e)}"
-
-# Example usage
-if __name__ == "__main__":
-    test_input = "The sun sets over the ocean"
-    lyrics = generate_lyrics(test_input)
-    print(lyrics) 
