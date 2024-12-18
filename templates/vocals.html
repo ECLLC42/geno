@@ -186,6 +186,140 @@
                 submitButton.disabled = false;
             });
         });
+
+        function pollTaskStatus(taskId) {
+            fetch(`/task_status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Task status:', data);
+                    
+                    if (data.state === 'PENDING' || data.state === 'PROGRESS') {
+                        setTimeout(() => pollTaskStatus(taskId), 2000);
+                    }
+                    else if (data.state === 'SUCCESS') {
+                        // Redirect to listen page with the song data
+                        window.location.href = '/listen?' + new URLSearchParams({
+                            lyrics: document.querySelector('input[name="lyrics"]').value,
+                            'genres[]': Array.from(document.querySelectorAll('input[name="genres[]"]')).map(i => i.value),
+                            'moods[]': Array.from(document.querySelectorAll('input[name="moods[]"]')).map(i => i.value),
+                            'instruments[]': Array.from(document.querySelectorAll('input[name="instruments[]"]')).map(i => i.value),
+                            vocals: document.querySelector('input[name="vocals"]:checked').value,
+                            song_data: JSON.stringify(data.song_data)  // Add the song data to the URL
+                        });
+                    }
+                    else if (data.state === 'FAILURE' || data.state === 'ERROR') {
+                        alert('Failed to generate song: ' + (data.status || 'Unknown error'));
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error polling task status:', error);
+                    alert('Error checking task status');
+                });
+        }
+
+        document.getElementById('vocalsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading overlay
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            
+            // Get form data
+            const formData = new FormData(this);
+            
+            // Send to generate_song endpoint
+            fetch('/generate_song', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.task_id) {
+                    pollTaskStatus(data.task_id);
+                } else {
+                    throw new Error('No task ID received');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to start song generation');
+                overlay.classList.add('hidden');
+            });
+        });
+    </script>
+
+    <!-- Add this right before closing </body> tag -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50">
+        <div class="glass-card p-8 text-center absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-11/12 max-w-lg">
+            <div class="space-y-6 bg-white bg-opacity-90 p-6 rounded-2xl">
+                <!-- Animated music notes -->
+                <div class="flex justify-center space-x-4">
+                    <div class="animate-bounce text-4xl delay-0">🎵</div>
+                    <div class="animate-bounce text-4xl delay-100">🎹</div>
+                    <div class="animate-bounce text-4xl delay-200">🎸</div>
+                    <div class="animate-bounce text-4xl delay-300">🎼</div>
+                </div>
+                
+                <!-- Loading text -->
+                <h2 class="text-3xl font-bold text-purple-600 rainbow-text">
+                    ✨ Making Musical Magic! ✨
+                </h2>
+                
+                <!-- Fun loading messages -->
+                <div id="loadingMessages" class="text-xl text-purple-700">
+                    Mixing the melodies...
+                </div>
+                
+                <!-- Progress bar -->
+                <div class="w-full bg-purple-200 rounded-full h-4 overflow-hidden">
+                    <div id="progressBar" class="bg-gradient-to-r from-purple-400 to-pink-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes rainbow {
+            0% { color: #ff0000; }
+            14% { color: #ff7f00; }
+            28% { color: #ffff00; }
+            42% { color: #00ff00; }
+            56% { color: #0000ff; }
+            70% { color: #4b0082; }
+            84% { color: #8f00ff; }
+            100% { color: #ff0000; }
+        }
+
+        .rainbow-text {
+            animation: rainbow 4s linear infinite;
+        }
+
+        .delay-100 {
+            animation-delay: 100ms;
+        }
+        .delay-200 {
+            animation-delay: 200ms;
+        }
+        .delay-300 {
+            animation-delay: 300ms;
+        }
+    </style>
+
+    <script>
+        const loadingMessages = [
+            "Mixing the melodies... 🎵",
+            "Sprinkling magic dust... ✨",
+            "Teaching robots to sing... 🤖",
+            "Waking up the music fairies... 🧚‍♀️",
+            "Tuning the virtual instruments... 🎸",
+            "Adding extra sparkles... ⭐",
+            "Warming up the band... 🎺",
+            "Catching shooting stars... 🌠",
+            "Dancing with unicorns... 🦄",
+            "Creating rainbow sounds... 🌈"
+        ];
     </script>
 </body>
 </html> 

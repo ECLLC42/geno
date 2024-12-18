@@ -209,102 +209,6 @@
         }
     </style>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Start song generation immediately when page loads
-        startSongGeneration();
-    });
-
-    function startSongGeneration() {
-        const formData = new FormData();
-        
-        // Get the values from hidden inputs instead of using template syntax
-        formData.append('lyrics', document.querySelector('input[name="lyrics"]').value);
-        formData.append('vocals', document.querySelector('input[name="vocals"]').value);
-        
-        // Get all genre inputs
-        document.querySelectorAll('input[name="genres[]"]').forEach(input => {
-            formData.append('genres[]', input.value);
-        });
-        
-        // Get all mood inputs
-        document.querySelectorAll('input[name="moods[]"]').forEach(input => {
-            formData.append('moods[]', input.value);
-        });
-        
-        // Get all instrument inputs
-        document.querySelectorAll('input[name="instruments[]"]').forEach(input => {
-            formData.append('instruments[]', input.value);
-        });
-        
-        // Call generate_song endpoint
-        fetch('/generate_song', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.task_id) {
-                pollTaskStatus(data.task_id);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showError('Failed to start song generation');
-        });
-    }
-
-    function pollTaskStatus(taskId) {
-        fetch(`/task_status/${taskId}`)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Task status:', data);
-                console.log('Task state:', data.state);
-                
-                if (data.state === 'PENDING' || data.state === 'PROGRESS') {
-                    document.getElementById('songPlayer').classList.add('hidden');
-                    document.getElementById('taskStatus').classList.remove('hidden');
-                    setTimeout(() => pollTaskStatus(taskId), 2000);
-                }
-                else if (data.state === 'SUCCESS') {
-                    console.log('Task succeeded, song data:', data);
-                    document.getElementById('taskStatus').classList.add('hidden');
-                    document.getElementById('errorMessage').classList.add('hidden');
-                    
-                    const songPlayer = document.getElementById('songPlayer');
-                    songPlayer.classList.remove('hidden');
-                    
-                    if (data.song_data && data.song_data.songs) {
-                        showPlayer(data.song_data);
-                    } else {
-                        console.error('No song data in response:', data);
-                        showError('No song data received');
-                    }
-                }
-                else if (data.state === 'FAILURE' || data.state === 'ERROR') {
-                    document.getElementById('taskStatus').classList.add('hidden');
-                    document.getElementById('songPlayer').classList.add('hidden');
-                    showError(data.status || 'Task failed');
-                }
-            })
-            .catch(error => {
-                console.error('Error polling task status:', error);
-                showError('Error checking task status');
-            });
-    }
-
-    // Cleanup function for wavesurfer instances
-    function cleanupWavesurfer() {
-        if (window.peaks) {
-            window.peaks.destroy();
-            window.peaks = null;
-        }
-        const audio = document.getElementById('audio');
-        if (audio) {
-            audio.pause();
-            audio.currentTime = 0;
-        }
-    }
-
     function createWaveformPlayer(container, song) {
         console.log('Creating player for song:', song);
         
@@ -329,7 +233,6 @@
                             <a href="${song.download_url}" class="download-button" download>Download Song</a>
                         </div>
                     </div>
-                    <audio id="audio" src="${song.play_url || song.mp3_url}"></audio>
                 </div>
             </div>
         `;
@@ -366,27 +269,10 @@
         // Update time display
         wavesurfer.on('audioprocess', () => {
             updateTime(wavesurfer.getCurrentTime(), wavesurfer.getDuration());
-            
-            // Handle fade out
-            const fadeOutDuration = 4;
-            const fadeOutStart = wavesurfer.getDuration() - fadeOutDuration;
-            
-            if (wavesurfer.getCurrentTime() >= fadeOutStart) {
-                const timeLeft = wavesurfer.getDuration() - wavesurfer.getCurrentTime();
-                const volume = Math.max(0, timeLeft / fadeOutDuration);
-                wavesurfer.setVolume(volume);
-            } else {
-                wavesurfer.setVolume(1);
-            }
         });
 
         wavesurfer.on('ready', () => {
             updateTime(0, wavesurfer.getDuration());
-        });
-
-        // Reset volume when playback ends
-        wavesurfer.on('finish', () => {
-            wavesurfer.setVolume(1);
         });
 
         return wavesurfer;
@@ -410,28 +296,38 @@
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    function showPlayer(songData) {
-        console.log('showPlayer called with:', songData);
-        const songPlayer = document.getElementById('songPlayer');
-        songPlayer.innerHTML = '';
-        if (songData.songs && songData.songs[0]) {  // Since we only have version 2 now
-            const song = songData.songs[0];  // Get the only song (version 2)
-            console.log('Creating player for song:', song);
-            createWaveformPlayer(songPlayer, song);
+    // Initialize player when page loads with URL parameters
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            // Get song data from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const songDataStr = urlParams.get('song_data');
+            if (songDataStr) {
+                const songData = JSON.parse(decodeURIComponent(songDataStr));
+                console.log('Parsed song data:', songData);
+                
+                const songPlayer = document.getElementById('songPlayer');
+                songPlayer.classList.remove('hidden');
+                
+                // Create player with the song data
+                if (songData.songs && songData.songs[0]) {
+                    createWaveformPlayer(songPlayer, songData.songs[0]);
+                } else {
+                    console.error('No song data found in URL parameters');
+                    showError('No song data available');
+                }
+            } else {
+                console.error('No song_data parameter in URL');
+                showError('No song data available');
+            }
+        } catch (error) {
+            console.error('Error initializing player:', error);
+            showError('Failed to initialize player');
         }
-    }
+    });
 
-    function showError(message) {
-        const errorMessage = document.getElementById('errorMessage');
-        errorMessage.innerHTML = `
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                <strong class="font-bold">Error: </strong>
-                <span class="block sm:inline">${message}</span>
-            </div>
-        `;
-        errorMessage.classList.remove('hidden');
-        setTimeout(() => errorMessage.classList.add('hidden'), 5000);
-    }
+    // Keep the utility functions for the player
+    function showError() { /* ... */ }
     </script>
 </head>
 <body class="p-8">
@@ -539,13 +435,6 @@
                             </div>
                         </details>
                     </div>
-                </div>
-
-                <!-- Song Player -->
-                <div id="taskStatus" class="glass-card p-8 text-center">
-                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-pink-400 border-solid mx-auto mb-4"></div>
-                    <p class="text-3xl font-bold text-purple-600">✨ Making The Magic Happen! ✨</p>
-                    <p class="text-xl text-purple-600 mt-2">This may take up to 2 minutes</p>
                 </div>
 
                 <div id="errorMessage" class="glass-card p-8 text-center hidden">

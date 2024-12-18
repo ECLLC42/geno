@@ -31,6 +31,7 @@ def generate_song_task(self, lyrics, genres, moods, vocals, instruments):
     
     try:
         result = generate_song(lyrics, genres, moods, vocals, instruments)
+        logger.info(f"Song generation successful: {result}")
         return result
     except Exception as e:
         logger.error(f"Task failed: {str(e)}", exc_info=True)

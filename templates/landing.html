@@ -32,12 +32,12 @@
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
             padding: clamp(0.5rem, 2vw, 1rem);
             text-align: center;
-            width: min(90vw, 800px);
+            width: min(90vw, 600px);
             margin: 0.5rem;
         }
 
         .inner-glass-card {
-            width: 100%;
+            width: 80%;
             margin: 0 auto clamp(1rem, 2vw, 1.5rem);
             padding: clamp(1rem, 3vw, 1.5rem);
             background: rgba(255, 255, 255, 0.25);
@@ -46,12 +46,15 @@
             border-radius: 20px;
             border: 2px solid rgba(255, 255, 255, 0.18);
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-            max-height: 50vh;
+            max-height: 40vh;
             overflow-y: auto;
         }
 
         .logo-bounce {
             animation: bounce 2s infinite;
+            width: 300px;
+            height: auto;
+            margin-bottom: 0;
         }
 
         @keyframes bounce {
@@ -81,6 +84,15 @@
         .start-button:hover {
             transform: scale(1.05);
             box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+
+        .thank-you-heading {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+        }
+
+        .description-text {
+            font-size: clamp(0.875rem, 2vw, 1.125rem);
+            line-height: 1.5;
         }
     </style>
 </head>
